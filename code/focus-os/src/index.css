@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-mono: 'Space Mono', monospace;
+    --font-sans: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FAF8F5;
+    color: #2D3142;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-mono-display {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Hard pixel shadows without blur */
+.pixel-border {
+  border: 2px solid #2D3142;
+}
+
+.pixel-border-soft {
+  border: 2px solid #B4C5E4;
+}
+
+.pixel-border-matcha {
+  border: 2px solid #7FB685;
+}
+
+.pixel-shadow-sm {
+  box-shadow: 2px 2px 0px #2D3142;
+}
+
+.pixel-shadow {
+  box-shadow: 3px 3px 0px #2D3142;
+}
+
+.pixel-shadow-lg {
+  box-shadow: 4px 4px 0px #2D3142;
+}
+
+.pixel-shadow-periwinkle {
+  box-shadow: 3px 3px 0px #B4C5E4;
+}
+
+.pixel-shadow-peach {
+  box-shadow: 3px 3px 0px #F4A261;
+}
+
+.pixel-inset {
+  box-shadow: inset 2px 2px 0px rgba(45, 49, 66, 0.15);
+}
+
+.pixel-inset-soft {
+  box-shadow: inset 1px 1px 0px rgba(45, 49, 66, 0.08);
+}
+
+/* Mechanical Button Press */
+.pixel-btn {
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+  user-select: none;
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #2D3142 !important;
+}
+
+.pixel-btn-lg:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px #2D3142 !important;
+}
+
+/* Retro CRT / LCD scanline subtle effect */
+.lcd-subtle {
+  background-image: linear-gradient(
+    rgba(45, 49, 66, 0.02) 50%,
+    transparent 50%
+  );
+  background-size: 100% 4px;
+}
+
+/* Custom retro blinking cursor */
+@keyframes retro-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.blink-cursor {
+  animation: retro-blink 1s infinite;
+}
