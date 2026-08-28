@@ -1,0 +1,6 @@
+{
+  "name": "Cozy Pastel Pixel",
+  "description": "Tactile low-stimulation retro handheld mindfulness & focus companion featuring pixel Pomodoro, ADHD micro-quests, sensory grounding, and digital pocket buddy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
