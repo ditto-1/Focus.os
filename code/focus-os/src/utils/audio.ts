@@ -190,3 +190,71 @@ export function setAmbientWhiteNoise(enable: boolean) {
     // Ignore
   }
 }
+
+// Built-in Retro Lo-Fi synth player
+let musicInterval: NodeJS.Timeout | null = null;
+let isLofiPlaying = false;
+
+export function toggleRetroLofi(enable: boolean, volume = 0.08) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    if (!enable) {
+      isLofiPlaying = false;
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
+      return;
+    }
+
+    if (isLofiPlaying) return;
+    isLofiPlaying = true;
+
+    // Cozy jazz/lo-fi chords: Cmaj7, Am7, Dm7, G7 in gentle 8-bit soft pulse
+    const chords = [
+      [261.63, 329.63, 392.00, 493.88], // Cmaj7
+      [220.00, 261.63, 329.63, 392.00], // Am7
+      [293.66, 349.23, 440.00, 523.25], // Dm7
+      [196.00, 246.94, 293.66, 349.23], // G7
+    ];
+
+    let chordIdx = 0;
+    const playChord = () => {
+      if (!isLofiPlaying) return;
+      const currentChord = chords[chordIdx % chords.length];
+      chordIdx++;
+
+      currentChord.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = i === 0 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, ctx.currentTime);
+
+        const startTime = ctx.currentTime + i * 0.04;
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(volume / (i === 0 ? 1 : 1.8), startTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.8);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 1.9);
+      });
+    };
+
+    playChord();
+    musicInterval = setInterval(playChord, 2000);
+  } catch {
+    // Ignore
+  }
+}
+

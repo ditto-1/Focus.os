@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Plus, Wind, Coffee, Zap, Brain } from 'lucide-react';
-import { FocusMode } from '../types';
-import { playMechanicalClick, playChiptuneBeep, playVictoryFanfare } from '../utils/audio';
+import { Play, Pause, RotateCcw, Plus, Wind, Coffee, Zap, Brain, Check, Radio, Disc, ExternalLink } from 'lucide-react';
+import { FocusMode, TaskItem } from '../types';
+import { playMechanicalClick, playChiptuneBeep, playVictoryFanfare, playQuestComplete } from '../utils/audio';
 
 interface FocusScreenProps {
   soundEnabled: boolean;
   onSessionComplete: (minutes: number) => void;
   isTimerRunning: boolean;
   setIsTimerRunning: (running: boolean) => void;
+  activeTask: TaskItem | null;
+  onClearActiveTask: () => void;
+  onToggleSubtask: (taskId: string, subtaskId: string) => void;
+  onCompleteTask: (taskId: string) => void;
+  isRetroLofiActive: boolean;
+  onToggleRetroLofi: (active: boolean) => void;
+  onOpenMusicTab: () => void;
 }
 
 const MODE_PRESETS: Record<FocusMode, { label: string; minutes: number; desc: string; icon: React.ReactNode }> = {
@@ -42,6 +49,13 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
   onSessionComplete,
   isTimerRunning,
   setIsTimerRunning,
+  activeTask,
+  onClearActiveTask,
+  onToggleSubtask,
+  onCompleteTask,
+  isRetroLofiActive,
+  onToggleRetroLofi,
+  onOpenMusicTab,
 }) => {
   const [currentMode, setCurrentMode] = useState<FocusMode>('deep');
   const [totalSeconds, setTotalSeconds] = useState(25 * 60);
@@ -147,6 +161,86 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
 
   return (
     <div className="w-full space-y-4">
+      {/* Active Focus Task Banner (Linked directly to Task Recommendation) */}
+      {activeTask && (
+        <div className="bg-[#CADBFB] border-2 border-[#2D3142] p-4 pixel-shadow">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#2D3142] pb-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142]">
+                ACTIVE FOCUS OBJECTIVE
+              </span>
+              <span className="font-mono text-xs text-[#2D3142]">
+                {activeTask.priority.toUpperCase()} PRIORITY • {activeTask.deadline}
+              </span>
+            </div>
+
+            <button
+              id="clear-focus-task-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                onClearActiveTask();
+              }}
+              className="pixel-btn text-[10px] font-mono font-bold px-2 py-0.5 bg-[#FAF8F5] border border-[#2D3142] text-[#2D3142]"
+            >
+              CHANGE OBJECTIVE [×]
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 my-1">
+            <div>
+              <h3 className="font-mono text-base font-bold text-[#2D3142]">
+                {activeTask.title}
+              </h3>
+              {activeTask.notes && (
+                <p className="font-sans text-xs text-[#2D3142]/80 mt-0.5">
+                  {activeTask.notes}
+                </p>
+              )}
+            </div>
+
+            <button
+              id="complete-active-focus-task-btn"
+              onClick={() => {
+                playQuestComplete(soundEnabled);
+                onCompleteTask(activeTask.id);
+              }}
+              className="pixel-btn px-3 py-1.5 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm whitespace-nowrap self-start sm:self-center"
+            >
+              ✓ MARK COMPLETE
+            </button>
+          </div>
+
+          {/* Subtasks Checklist if present */}
+          {activeTask.subtasks.length > 0 && (
+            <div className="mt-3 pt-2 border-t border-[#2D3142]/20 space-y-1.5">
+              <span className="font-mono text-[10px] font-bold text-[#2D3142] uppercase">
+                MICRO-STEPS CHECKLIST:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {activeTask.subtasks.map((sub) => (
+                  <div
+                    key={sub.id}
+                    onClick={() => {
+                      if (!sub.completed) playQuestComplete(soundEnabled);
+                      else playMechanicalClick(soundEnabled);
+                      onToggleSubtask(activeTask.id, sub.id);
+                    }}
+                    className={`cursor-pointer flex items-center gap-2 p-1.5 border border-[#2D3142] text-xs font-sans ${
+                      sub.completed ? 'bg-[#E4DFD5]/50 line-through text-[#2D3142]/60' : 'bg-[#FAF8F5]'
+                    }`}
+                  >
+                    <span className="font-mono text-[10px] font-bold text-[#7FB685]">
+                      {sub.completed ? '☑' : '☐'}
+                    </span>
+                    <span className="truncate">{sub.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Mode Selector Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 select-none">
         {(Object.keys(MODE_PRESETS) as FocusMode[]).map((mode) => {
@@ -180,7 +274,6 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
 
       {/* Main Chunky Hardware LCD Display Unit */}
       <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-5 sm:p-8 pixel-shadow-lg relative overflow-hidden">
-        {/* Subtle retro LCD scanline overlay */}
         <div className="absolute inset-0 lcd-subtle pointer-events-none" />
 
         {/* LCD Header */}
@@ -288,6 +381,49 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
           >
             <RotateCcw className="w-4 h-4" />
             <span>RESET</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Mini Music Control Dock Bar */}
+      <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-3 pixel-shadow flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Disc className="w-4 h-4 text-[#7FB685] animate-spin" style={{ animationDuration: '6s' }} />
+          <span className="font-mono text-xs font-bold text-[#2D3142]">
+            FOCUS AUDIO:
+          </span>
+          <span className="font-mono text-xs text-[#2D3142]/80">
+            {isRetroLofiActive ? '8-BIT LO-FI (PLAYING)' : 'SPOTIFY / APPLE MUSIC'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Quick toggle 8-bit lofi */}
+          <button
+            id="quick-toggle-lofi-btn"
+            onClick={() => {
+              playMechanicalClick(soundEnabled);
+              onToggleRetroLofi(!isRetroLofiActive);
+            }}
+            className={`pixel-btn px-2.5 py-1 border-2 border-[#2D3142] font-mono text-[11px] font-bold ${
+              isRetroLofiActive
+                ? 'bg-[#F4A261] text-[#2D3142]'
+                : 'bg-[#FAF8F5] text-[#2D3142]'
+            }`}
+          >
+            {isRetroLofiActive ? '❚❚ PAUSE 8-BIT' : '▶ 8-BIT LO-FI'}
+          </button>
+
+          {/* Jump to full Music hub */}
+          <button
+            id="jump-to-music-hub-btn"
+            onClick={() => {
+              playMechanicalClick(soundEnabled);
+              onOpenMusicTab();
+            }}
+            className="pixel-btn px-2.5 py-1 bg-[#CADBFB] hover:bg-[#B4C5E4] border-2 border-[#2D3142] font-mono text-[11px] font-bold text-[#2D3142]"
+          >
+            OPEN SPOTIFY / APPLE HUB →
           </button>
         </div>
       </div>

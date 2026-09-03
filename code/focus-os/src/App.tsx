@@ -3,16 +3,25 @@ import { ConsoleHeader } from './components/ConsoleHeader';
 import { NavigationTabs } from './components/NavigationTabs';
 import { PixelPet } from './components/PixelPet';
 import { FocusScreen } from './components/FocusScreen';
-import { QuestScreen } from './components/QuestScreen';
+import { WhatShouldIDoNow } from './components/WhatShouldIDoNow';
+import { TaskPlanner } from './components/TaskPlanner';
+import { RoutinesScreen } from './components/RoutinesScreen';
+import { MusicController } from './components/MusicController';
 import { SensoryScreen } from './components/SensoryScreen';
 import { CartridgeMemoryScreen } from './components/CartridgeMemoryScreen';
-import { ScreenTab, Quest, DayActivity, PetState } from './types';
-import { INITIAL_QUESTS, INITIAL_WEEK_ACTIVITY } from './data/initialData';
-import { setAmbientWhiteNoise, playVictoryFanfare, playMechanicalClick } from './utils/audio';
+import { ScreenTab, TaskItem, RoutineItem, DayActivity, PetState, Subtask } from './types';
+import { INITIAL_TASKS, INITIAL_ROUTINES, INITIAL_WEEK_ACTIVITY } from './data/initialData';
+import {
+  setAmbientWhiteNoise,
+  toggleRetroLofi,
+  playVictoryFanfare,
+  playMechanicalClick,
+  playQuestComplete,
+} from './utils/audio';
 
 export default function App() {
-  // Navigation tab
-  const [currentTab, setCurrentTab] = useState<ScreenTab>('focus');
+  // Active Screen Tab
+  const [currentTab, setCurrentTab] = useState<ScreenTab>('whatnow');
 
   // Audio settings
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
@@ -21,73 +30,106 @@ export default function App() {
   });
 
   const [ambientNoise, setAmbientNoise] = useState<boolean>(false);
+  const [isRetroLofiActive, setIsRetroLofiActive] = useState<boolean>(false);
 
-  // Quests
-  const [quests, setQuests] = useState<Quest[]>(() => {
-    const saved = localStorage.getItem('cozy_pixel_quests');
-    return saved ? JSON.parse(saved) : INITIAL_QUESTS;
+  // Tasks & Responsibilities (Adaptive Task Matrix)
+  const [tasks, setTasks] = useState<TaskItem[]>(() => {
+    const saved = localStorage.getItem('cozy_pixel_tasks_v2');
+    return saved ? JSON.parse(saved) : INITIAL_TASKS;
   });
+
+  // Recurring Daily Routines
+  const [routines, setRoutines] = useState<RoutineItem[]>(() => {
+    const saved = localStorage.getItem('cozy_pixel_routines_v2');
+    return saved ? JSON.parse(saved) : INITIAL_ROUTINES;
+  });
+
+  // Currently focused task
+  const [activeFocusTask, setActiveFocusTask] = useState<TaskItem | null>(() => {
+    const saved = localStorage.getItem('cozy_pixel_active_task');
+    return saved ? JSON.parse(saved) : INITIAL_TASKS[0];
+  });
+
+  // AI Breakdown loading state
+  const [isBreakingDownId, setIsBreakingDownId] = useState<string | null>(null);
+
+  // Focus timer running state
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
 
   // 7-day activity log
   const [activityLog, setActivityLog] = useState<DayActivity[]>(() => {
-    const saved = localStorage.getItem('cozy_pixel_activity');
+    const saved = localStorage.getItem('cozy_pixel_activity_v2');
     return saved ? JSON.parse(saved) : INITIAL_WEEK_ACTIVITY;
   });
 
   // Pet state
   const [pet, setPet] = useState<PetState>(() => {
-    const saved = localStorage.getItem('cozy_pixel_pet');
+    const saved = localStorage.getItem('cozy_pixel_pet_v2');
     return saved
       ? JSON.parse(saved)
       : {
           name: 'Sprout',
-          level: 3,
-          exp: 40,
+          level: 4,
+          exp: 65,
           maxExp: 100,
           mood: 'happy',
-          berriesFed: 12,
+          berriesFed: 15,
         };
   });
 
   // Scratchpad
   const [scratchpad, setScratchpad] = useState<string>(() => {
-    return localStorage.getItem('cozy_pixel_scratchpad') || '• Remember to take gentle breaths.\n• You do not have to do everything at once.';
+    return (
+      localStorage.getItem('cozy_pixel_scratchpad_v2') ||
+      '• Remember to take gentle breaths.\n• You do not have to finish everything right now.\n• One small micro-step creates momentum.'
+    );
   });
 
-  // Focus timer running state
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-
-  // Sync to localStorage
+  // Persistence to localStorage
   useEffect(() => {
     localStorage.setItem('cozy_pixel_sound', JSON.stringify(soundEnabled));
   }, [soundEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('cozy_pixel_quests', JSON.stringify(quests));
-  }, [quests]);
+    localStorage.setItem('cozy_pixel_tasks_v2', JSON.stringify(tasks));
+  }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem('cozy_pixel_activity', JSON.stringify(activityLog));
+    localStorage.setItem('cozy_pixel_routines_v2', JSON.stringify(routines));
+  }, [routines]);
+
+  useEffect(() => {
+    localStorage.setItem('cozy_pixel_active_task', JSON.stringify(activeFocusTask));
+  }, [activeFocusTask]);
+
+  useEffect(() => {
+    localStorage.setItem('cozy_pixel_activity_v2', JSON.stringify(activityLog));
   }, [activityLog]);
 
   useEffect(() => {
-    localStorage.setItem('cozy_pixel_pet', JSON.stringify(pet));
+    localStorage.setItem('cozy_pixel_pet_v2', JSON.stringify(pet));
   }, [pet]);
 
   useEffect(() => {
-    localStorage.setItem('cozy_pixel_scratchpad', scratchpad);
+    localStorage.setItem('cozy_pixel_scratchpad_v2', scratchpad);
   }, [scratchpad]);
 
-  // Ambient rain noise toggle handler
+  // Ambient rain noise handler
   const handleToggleAmbient = () => {
     const next = !ambientNoise;
     setAmbientNoise(next);
     setAmbientWhiteNoise(next);
   };
 
-  // Focus session complete
+  // 8-bit lofi audio handler
+  const handleToggleRetroLofi = (active: boolean) => {
+    setIsRetroLofiActive(active);
+    toggleRetroLofi(active);
+  };
+
+  // Complete a focus session (timer finished)
   const handleSessionComplete = (minutes: number) => {
-    // Add EXP to pet
+    // Reward pet
     setPet((prev) => {
       const expGain = minutes * 2;
       const newExp = prev.exp + expGain;
@@ -109,34 +151,39 @@ export default function App() {
       };
     });
 
-    // Update today's activity
+    // Update today's activity log
     setActivityLog((prev) => {
       const copy = [...prev];
       const todayIdx = copy.length - 1;
       if (todayIdx >= 0) {
         const today = copy[todayIdx];
         const newMins = today.minutesFocused + minutes;
-        const newLevel = newMins >= 60 ? 3 : newMins >= 30 ? 2 : 1;
         copy[todayIdx] = {
           ...today,
           minutesFocused: newMins,
-          level: newLevel,
+          level: newMins >= 60 ? 3 : newMins >= 30 ? 2 : 1,
         };
       }
       return copy;
     });
   };
 
-  // Toggle quest
-  const handleToggleQuest = (id: string) => {
-    setQuests((prev) =>
-      prev.map((q) => {
-        if (q.id === id) {
-          const nextCompleted = !q.completed;
+  // Start focus on a selected task
+  const handleStartFocusOnTask = (task: TaskItem) => {
+    setActiveFocusTask(task);
+    setCurrentTab('focus');
+  };
+
+  // Toggle task complete
+  const handleToggleTask = (id: string) => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === id) {
+          const nextCompleted = !t.completed;
           if (nextCompleted) {
             // Reward pet with EXP & Berry
             setPet((p) => {
-              const expGain = q.staminaPoints * 10;
+              const expGain = t.staminaPoints * 15;
               const newExp = p.exp + expGain;
               return {
                 ...p,
@@ -146,7 +193,7 @@ export default function App() {
               };
             });
 
-            // Increment completed count in activity log
+            // Increment activity log
             setActivityLog((act) => {
               const copy = [...act];
               const todayIdx = copy.length - 1;
@@ -159,29 +206,154 @@ export default function App() {
               return copy;
             });
           }
-          return { ...q, completed: nextCompleted };
+          return { ...t, completed: nextCompleted };
         }
-        return q;
+        return t;
       })
     );
   };
 
-  // Add quest
-  const handleAddQuest = (title: string, staminaPoints: 1 | 2 | 3, category: 'core' | 'side' | 'wellness') => {
-    const newQ: Quest = {
-      id: `quest-${Date.now()}`,
+  // Toggle subtask complete
+  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const updatedSubtasks = t.subtasks.map((st) => {
+            if (st.id === subtaskId) {
+              const nextDone = !st.completed;
+              if (nextDone) {
+                setPet((p) => ({ ...p, exp: p.exp + 5 }));
+              }
+              return { ...st, completed: nextDone };
+            }
+            return st;
+          });
+
+          // Check if all subtasks are now completed
+          const allDone = updatedSubtasks.length > 0 && updatedSubtasks.every((st) => st.completed);
+
+          return {
+            ...t,
+            subtasks: updatedSubtasks,
+            completed: allDone ? true : t.completed,
+          };
+        }
+        return t;
+      })
+    );
+  };
+
+  // Add new task
+  const handleAddTask = (
+    title: string,
+    priority: 'urgent' | 'high' | 'normal' | 'low',
+    deadline: string,
+    estimatedMinutes: number,
+    staminaPoints: 1 | 2 | 3,
+    category: 'academic' | 'project' | 'life' | 'wellness'
+  ) => {
+    const newTask: TaskItem = {
+      id: `task-${Date.now()}`,
       title,
+      priority,
+      deadline,
+      estimatedMinutes,
       staminaPoints,
       completed: false,
       category,
+      subtasks: [],
       createdAt: Date.now(),
     };
-    setQuests((prev) => [newQ, ...prev]);
+    setTasks((prev) => [newTask, ...prev]);
   };
 
-  // Delete quest
-  const handleDeleteQuest = (id: string) => {
-    setQuests((prev) => prev.filter((q) => q.id !== id));
+  // Delete task
+  const handleDeleteTask = (id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (activeFocusTask?.id === id) {
+      setActiveFocusTask(null);
+    }
+  };
+
+  // AI Task Decomposition (/api/breakdown)
+  const handleBreakdownTask = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    setIsBreakingDownId(taskId);
+    try {
+      const res = await fetch('/api/breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskTitle: task.title,
+          totalMinutes: task.estimatedMinutes,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.subtasks) && data.subtasks.length > 0) {
+          const generated: Subtask[] = data.subtasks.map((s: any, idx: number) => ({
+            id: `sub-${Date.now()}-${idx}`,
+            title: s.title,
+            estimatedMinutes: s.estimatedMinutes || 10,
+            staminaPoints: s.staminaPoints || 1,
+            completed: false,
+          }));
+
+          setTasks((prev) =>
+            prev.map((t) => (t.id === taskId ? { ...t, subtasks: generated } : t))
+          );
+          if (activeFocusTask?.id === taskId) {
+            setActiveFocusTask((prev) => (prev ? { ...prev, subtasks: generated } : null));
+          }
+          playVictoryFanfare(soundEnabled);
+        }
+      }
+    } catch (err) {
+      console.error('Task breakdown error:', err);
+    } finally {
+      setIsBreakingDownId(null);
+    }
+  };
+
+  // Toggle routine
+  const handleToggleRoutine = (id: string) => {
+    setRoutines((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const nextDone = !r.completedToday;
+          if (nextDone) {
+            setPet((p) => ({
+              ...p,
+              exp: p.exp + r.staminaReward * 10,
+              berriesFed: p.berriesFed + 1,
+            }));
+          }
+          return {
+            ...r,
+            completedToday: nextDone,
+            streak: nextDone ? r.streak + 1 : Math.max(0, r.streak - 1),
+          };
+        }
+        return r;
+      })
+    );
+  };
+
+  // Add routine
+  const handleAddRoutine = (title: string, timeOfDay: 'morning' | 'afternoon' | 'evening') => {
+    const newR: RoutineItem = {
+      id: `rt-${Date.now()}`,
+      title,
+      timeOfDay,
+      iconName: 'sparkles',
+      streak: 1,
+      completedToday: false,
+      staminaReward: 1,
+    };
+    setRoutines((prev) => [...prev, newR]);
   };
 
   // Feed berry to pet
@@ -206,10 +378,12 @@ export default function App() {
     });
   };
 
-  // Reset all save data
+  // Reset data to defaults
   const handleResetData = () => {
     localStorage.clear();
-    setQuests(INITIAL_QUESTS);
+    setTasks(INITIAL_TASKS);
+    setRoutines(INITIAL_ROUTINES);
+    setActiveFocusTask(INITIAL_TASKS[0]);
     setActivityLog(INITIAL_WEEK_ACTIVITY);
     setPet({
       name: 'Sprout',
@@ -219,10 +393,10 @@ export default function App() {
       mood: 'happy',
       berriesFed: 3,
     });
-    setScratchpad('• Take gentle breaths.\n• Everything is fine.');
+    setScratchpad('• Take gentle breaths.\n• You do not have to do everything at once.');
   };
 
-  const activeQuestsCount = quests.filter((q) => !q.completed).length;
+  const activeTasksCount = tasks.filter((t) => !t.completed).length;
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#2D3142] flex flex-col font-sans selection:bg-[#B4C5E4]">
@@ -243,7 +417,7 @@ export default function App() {
             currentTab={currentTab}
             onSelectTab={setCurrentTab}
             soundEnabled={soundEnabled}
-            activeQuestsCount={activeQuestsCount}
+            activeTasksCount={activeTasksCount}
           />
 
           {/* Virtual Companion Pet - Always accessible at top */}
@@ -256,29 +430,73 @@ export default function App() {
 
           {/* Active Screen Display Area */}
           <div className="w-full transition-all">
+            {/* Screen 1: Focus Engine & Objective */}
             {currentTab === 'focus' && (
               <FocusScreen
                 soundEnabled={soundEnabled}
                 onSessionComplete={handleSessionComplete}
                 isTimerRunning={isTimerRunning}
                 setIsTimerRunning={setIsTimerRunning}
+                activeTask={activeFocusTask}
+                onClearActiveTask={() => setActiveFocusTask(null)}
+                onToggleSubtask={handleToggleSubtask}
+                onCompleteTask={handleToggleTask}
+                isRetroLofiActive={isRetroLofiActive}
+                onToggleRetroLofi={handleToggleRetroLofi}
+                onOpenMusicTab={() => setCurrentTab('music')}
               />
             )}
 
-            {currentTab === 'quests' && (
-              <QuestScreen
-                quests={quests}
-                onToggleQuest={handleToggleQuest}
-                onAddQuest={handleAddQuest}
-                onDeleteQuest={handleDeleteQuest}
+            {/* Screen 2: "What Should I Do Now?" Adaptive Prioritization Recommender */}
+            {currentTab === 'whatnow' && (
+              <WhatShouldIDoNow
+                tasks={tasks}
+                onStartFocusOnTask={handleStartFocusOnTask}
+                onBreakdownTask={handleBreakdownTask}
                 soundEnabled={soundEnabled}
               />
             )}
 
+            {/* Screen 3: Adaptive Task Planner & AI Breakdown */}
+            {currentTab === 'planner' && (
+              <TaskPlanner
+                tasks={tasks}
+                onToggleTask={handleToggleTask}
+                onToggleSubtask={handleToggleSubtask}
+                onAddTask={handleAddTask}
+                onDeleteTask={handleDeleteTask}
+                onBreakdownTask={handleBreakdownTask}
+                onStartFocusOnTask={handleStartFocusOnTask}
+                soundEnabled={soundEnabled}
+                isBreakingDownId={isBreakingDownId}
+              />
+            )}
+
+            {/* Screen 4: Recurring Routines & Habit Tracker */}
+            {currentTab === 'routines' && (
+              <RoutinesScreen
+                routines={routines}
+                onToggleRoutine={handleToggleRoutine}
+                onAddRoutine={handleAddRoutine}
+                soundEnabled={soundEnabled}
+              />
+            )}
+
+            {/* Screen 5: Spotify & Apple Music Controller */}
+            {currentTab === 'music' && (
+              <MusicController
+                soundEnabled={soundEnabled}
+                isRetroLofiActive={isRetroLofiActive}
+                onToggleRetroLofi={handleToggleRetroLofi}
+              />
+            )}
+
+            {/* Screen 6: Sensory Grounding & Tactile Fidgets */}
             {currentTab === 'sensory' && (
               <SensoryScreen soundEnabled={soundEnabled} />
             )}
 
+            {/* Screen 7: Memory Cartridge, Activity Heatmap & Brain Dump */}
             {currentTab === 'cartridge' && (
               <CartridgeMemoryScreen
                 activityLog={activityLog}
@@ -295,7 +513,7 @@ export default function App() {
         {/* Handheld Console Hardware Bottom Footer */}
         <footer className="w-full bg-[#FAF8F5] border-t-2 border-[#2D3142] py-4 px-4 sm:px-6 mt-6 select-none">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* D-Pad / Handheld Hardware Emulation decorative buttons */}
+            {/* D-Pad / Handheld Hardware Emulation buttons */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 bg-[#F2EFE9] border border-[#2D3142] px-2 py-1">
                 <span className="font-mono text-[10px] text-[#2D3142]/70">D-PAD:</span>
@@ -307,7 +525,15 @@ export default function App() {
                   id="hardware-b-btn"
                   onClick={() => {
                     playMechanicalClick(soundEnabled);
-                    const tabs: ScreenTab[] = ['focus', 'quests', 'sensory', 'cartridge'];
+                    const tabs: ScreenTab[] = [
+                      'focus',
+                      'whatnow',
+                      'planner',
+                      'routines',
+                      'music',
+                      'sensory',
+                      'cartridge',
+                    ];
                     const prevIdx = (tabs.indexOf(currentTab) - 1 + tabs.length) % tabs.length;
                     setCurrentTab(tabs[prevIdx]);
                   }}
@@ -320,7 +546,15 @@ export default function App() {
                   id="hardware-a-btn"
                   onClick={() => {
                     playMechanicalClick(soundEnabled);
-                    const tabs: ScreenTab[] = ['focus', 'quests', 'sensory', 'cartridge'];
+                    const tabs: ScreenTab[] = [
+                      'focus',
+                      'whatnow',
+                      'planner',
+                      'routines',
+                      'music',
+                      'sensory',
+                      'cartridge',
+                    ];
                     const nextIdx = (tabs.indexOf(currentTab) + 1) % tabs.length;
                     setCurrentTab(tabs[nextIdx]);
                   }}
@@ -336,7 +570,7 @@ export default function App() {
             <div className="flex items-center gap-2 font-mono text-[10px] text-[#2D3142]/60">
               <span>MODEL NO. DMG-CPP-2026</span>
               <span>•</span>
-              <span>MADE FOR CALM MINDS</span>
+              <span>THAPAR UCS503 PROPOSAL ENGINE</span>
             </div>
 
             {/* Right Headphone Jack & Certifications */}

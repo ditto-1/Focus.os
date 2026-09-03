@@ -1,21 +1,51 @@
-export type ScreenTab = 'focus' | 'quests' | 'sensory' | 'cartridge';
+export type ScreenTab =
+  | 'focus'
+  | 'whatnow'
+  | 'planner'
+  | 'routines'
+  | 'music'
+  | 'sensory'
+  | 'cartridge';
 
 export type FocusMode = 'deep' | 'sprint' | 'breathe' | 'rest';
 
-export interface Quest {
+export interface Subtask {
   id: string;
   title: string;
+  estimatedMinutes: number;
   staminaPoints: 1 | 2 | 3;
   completed: boolean;
-  category: 'core' | 'side' | 'wellness';
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  priority: 'urgent' | 'high' | 'normal' | 'low';
+  deadline: string;
+  estimatedMinutes: number;
+  staminaPoints: 1 | 2 | 3;
+  completed: boolean;
+  category: 'academic' | 'project' | 'life' | 'wellness';
+  subtasks: Subtask[];
+  notes?: string;
   createdAt: number;
 }
 
+export interface RoutineItem {
+  id: string;
+  title: string;
+  timeOfDay: 'morning' | 'afternoon' | 'evening';
+  iconName: string;
+  streak: number;
+  completedToday: boolean;
+  staminaReward: number;
+}
+
 export interface DayActivity {
-  date: string; // YYYY-MM-DD
+  date: string;
   minutesFocused: number;
   questsCompleted: number;
-  level: 0 | 1 | 2 | 3; // For pixel heatmap intensity
+  level: 0 | 1 | 2 | 3;
 }
 
 export interface PetState {
@@ -25,4 +55,23 @@ export interface PetState {
   maxExp: number;
   mood: 'happy' | 'focusing' | 'sleeping' | 'celebrating';
   berriesFed: number;
+}
+
+export interface MusicStation {
+  id: string;
+  name: string;
+  service: 'spotify' | 'applemusic' | 'retro_lofi';
+  type: 'embed' | 'stream';
+  embedSrc: string;
+  curator: string;
+  tag: string;
+}
+
+export interface MusicPlayerState {
+  service: 'spotify' | 'applemusic' | 'retro_lofi';
+  activeStationId: string;
+  customUrl: string;
+  isPlaying: boolean;
+  volume: number;
+  retroTrackIndex: number;
 }
