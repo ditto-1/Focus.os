@@ -75,3 +75,14 @@ export interface MusicPlayerState {
   volume: number;
   retroTrackIndex: number;
 }
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  studyMajor?: string;
+  dailyGoalMinutes?: number;
+  createdAt: number;
+}
+

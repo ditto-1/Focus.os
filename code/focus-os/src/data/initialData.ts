@@ -249,3 +249,52 @@ export const SENSORY_GROUNDING_STEPS = [
     examples: ['Minty freshness of water', '"I take things one gentle breath at a time"'],
   },
 ];
+
+export const NEW_USER_INITIAL_TASKS: TaskItem[] = [
+  {
+    id: 'nu-task-1',
+    title: 'Orient to Cozy Pocket & test 10-minute focus timer',
+    priority: 'high',
+    deadline: 'Today',
+    estimatedMinutes: 10,
+    staminaPoints: 1,
+    completed: false,
+    category: 'wellness',
+    notes: 'Welcome to your cartridge! Try pressing Start in the Focus screen.',
+    subtasks: [
+      { id: 'nu-sub-1', title: 'Put phone on Do Not Disturb', estimatedMinutes: 2, staminaPoints: 1, completed: true },
+      { id: 'nu-sub-2', title: 'Start a gentle 10-minute timer', estimatedMinutes: 8, staminaPoints: 1, completed: false },
+    ],
+    createdAt: Date.now(),
+  },
+  {
+    id: 'nu-task-2',
+    title: 'Add your primary coursework or project goal',
+    priority: 'urgent',
+    deadline: 'Tomorrow',
+    estimatedMinutes: 15,
+    staminaPoints: 2,
+    completed: false,
+    category: 'academic',
+    notes: 'Use the Planner tab to add assignments and micro-breakdowns.',
+    subtasks: [
+      { id: 'nu-sub-3', title: 'Check university portal or syllabus', estimatedMinutes: 5, staminaPoints: 1, completed: false },
+      { id: 'nu-sub-4', title: 'Type top priority task into Planner', estimatedMinutes: 5, staminaPoints: 1, completed: false },
+    ],
+    createdAt: Date.now(),
+  },
+  {
+    id: 'nu-task-3',
+    title: 'Choose soothing background lofi music & hydrate',
+    priority: 'normal',
+    deadline: 'Today',
+    estimatedMinutes: 5,
+    staminaPoints: 1,
+    completed: false,
+    category: 'wellness',
+    notes: 'Sound helps synchronize ADHD focus.',
+    subtasks: [],
+    createdAt: Date.now(),
+  },
+];
+

@@ -21,6 +21,144 @@ async function startServer() {
     res.json({ status: 'ok', hasGeminiKey: !!process.env.GEMINI_API_KEY });
   });
 
+  // User storage for prototype
+  interface StoredUser {
+    id: string;
+    username: string;
+    name: string;
+    email: string;
+    passwordHash: string;
+    studyMajor?: string;
+    dailyGoalMinutes?: number;
+    createdAt: number;
+  }
+
+  const USERS: StoredUser[] = [
+    {
+      id: 'usr-demo-1',
+      username: 'alex',
+      name: 'Alex Chen',
+      email: 'alex@example.com',
+      passwordHash: 'password123',
+      studyMajor: 'Computer Science (B.Tech)',
+      dailyGoalMinutes: 60,
+      createdAt: Date.now() - 86400000 * 7,
+    },
+    {
+      id: 'usr-demo-2',
+      username: 'sam',
+      name: 'Sam Rivera',
+      email: 'sam@example.com',
+      passwordHash: 'password123',
+      studyMajor: 'Design & Engineering',
+      dailyGoalMinutes: 45,
+      createdAt: Date.now() - 86400000 * 3,
+    },
+  ];
+
+  // Auth API: Register new user
+  app.post('/api/auth/register', (req, res) => {
+    const { username, name, email, password, studyMajor, dailyGoalMinutes } = req.body;
+    if (!username || !password || !name) {
+      res.status(400).json({ error: 'Username, name, and password are required' });
+      return;
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanEmail = email ? String(email).trim().toLowerCase() : `${cleanUsername}@study.local`;
+
+    // Check if user already exists
+    const existing = USERS.find(
+      (u) => u.username === cleanUsername || (email && u.email === cleanEmail)
+    );
+    if (existing) {
+      res.status(409).json({ error: 'An account with that username or email already exists.' });
+      return;
+    }
+
+    const newUser: StoredUser = {
+      id: `usr-${Date.now()}`,
+      username: cleanUsername,
+      name: String(name).trim(),
+      email: cleanEmail,
+      passwordHash: String(password),
+      studyMajor: studyMajor ? String(studyMajor).trim() : 'General Studies',
+      dailyGoalMinutes: Number(dailyGoalMinutes) || 45,
+      createdAt: Date.now(),
+    };
+
+    USERS.push(newUser);
+
+    const safeUser = {
+      id: newUser.id,
+      username: newUser.username,
+      name: newUser.name,
+      email: newUser.email,
+      studyMajor: newUser.studyMajor,
+      dailyGoalMinutes: newUser.dailyGoalMinutes,
+      createdAt: newUser.createdAt,
+    };
+
+    res.status(201).json({
+      user: safeUser,
+      token: `tok-${newUser.id}-${Date.now()}`,
+      message: 'Account created successfully!',
+    });
+  });
+
+  // Auth API: Login
+  app.post('/api/auth/login', (req, res) => {
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      res.status(400).json({ error: 'Username/email and password are required' });
+      return;
+    }
+
+    const cleanId = String(identifier).trim().toLowerCase();
+    const user = USERS.find(
+      (u) => (u.username === cleanId || u.email === cleanId) && u.passwordHash === String(password)
+    );
+
+    if (!user) {
+      res.status(401).json({ error: 'Invalid username/email or password.' });
+      return;
+    }
+
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      studyMajor: user.studyMajor,
+      dailyGoalMinutes: user.dailyGoalMinutes,
+      createdAt: user.createdAt,
+    };
+
+    res.json({
+      user: safeUser,
+      token: `tok-${user.id}-${Date.now()}`,
+      message: 'Logged in successfully!',
+    });
+  });
+
+  // Auth API: Logout
+  app.post('/api/auth/logout', (req, res) => {
+    res.json({ success: true, message: 'Logged out successfully.' });
+  });
+
+  // Auth API: Demo users list for quick prototype testing
+  app.get('/api/auth/demo-users', (req, res) => {
+    const demo = USERS.map((u) => ({
+      username: u.username,
+      name: u.name,
+      email: u.email,
+      studyMajor: u.studyMajor,
+      demoPassword: u.passwordHash,
+    }));
+    res.json({ demoUsers: demo });
+  });
+
+
   // API 2: Task breakdown (converts large/vague task into 3-5 actionable micro-steps)
   app.post('/api/breakdown', async (req, res) => {
     const { taskTitle, totalMinutes, availableTime } = req.body;

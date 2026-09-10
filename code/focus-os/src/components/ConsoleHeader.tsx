@@ -1,12 +1,16 @@
 import React from 'react';
-import { Volume2, VolumeX, CloudRain, BatteryCharging, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, CloudRain, BatteryCharging, Sparkles, LogOut, LogIn, User } from 'lucide-react';
 import { playMechanicalClick } from '../utils/audio';
+import { AuthUser } from '../types';
 
 interface ConsoleHeaderProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   ambientNoise: boolean;
   onToggleAmbient: () => void;
+  currentUser: AuthUser | null;
+  onOpenAuth: () => void;
+  onLogout: () => void;
 }
 
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
@@ -14,6 +18,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   onToggleSound,
   ambientNoise,
   onToggleAmbient,
+  currentUser,
+  onOpenAuth,
+  onLogout,
 }) => {
   return (
     <header className="w-full bg-[#FAF8F5] border-b-2 border-[#2D3142] pb-3 pt-2 px-3 sm:px-6 select-none">
@@ -45,18 +52,51 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
           </span>
         </div>
 
-        {/* Right status & tactile toggles */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Battery Status LED */}
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#F2EFE9] border border-[#2D3142]">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full bg-[#7FB685] opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 bg-[#7FB685] border border-[#2D3142]"></span>
-            </span>
-            <span className="font-mono text-[10px] font-bold tracking-wider text-[#2D3142]">
-              BATTERY 96%
-            </span>
-          </div>
+        {/* Right status, user account & tactile toggles */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* User Account / Auth Section */}
+          {currentUser ? (
+            <div className="flex items-center gap-1 bg-[#F2EFE9] border-2 border-[#2D3142] px-1.5 py-0.5 pixel-inset-soft">
+              <div
+                title={`Signed in as ${currentUser.name} (${currentUser.studyMajor || 'Learner'})`}
+                className="flex items-center gap-1 cursor-default"
+              >
+                <div className="w-4 h-4 bg-[#7FB685] border border-[#2D3142] flex items-center justify-center text-[10px]">
+                  👤
+                </div>
+                <span className="font-mono text-[11px] font-bold text-[#2D3142] max-w-[80px] sm:max-w-[120px] truncate">
+                  {currentUser.name}
+                </span>
+              </div>
+
+              {/* Distinct Logout Button */}
+              <button
+                id="header-logout-btn"
+                onClick={() => {
+                  playMechanicalClick(soundEnabled);
+                  onLogout();
+                }}
+                title="Sign out of Cozy Pocket"
+                className="pixel-btn ml-1 flex items-center gap-1 px-1.5 py-0.5 bg-[#FAF8F5] hover:bg-[#ffdad6] border border-[#2D3142] font-mono text-[10px] font-bold text-[#ba1a1a]"
+              >
+                <LogOut className="w-3 h-3" />
+                <span className="hidden sm:inline">LOGOUT</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              id="header-login-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                onOpenAuth();
+              }}
+              title="Sign in or create account"
+              className="pixel-btn flex items-center gap-1 px-2 py-1 bg-[#7FB685] border-2 border-[#2D3142] font-mono text-[11px] font-bold text-[#2D3142] pixel-shadow-sm"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>SIGN IN</span>
+            </button>
+          )}
 
           {/* Sound FX Toggle Button */}
           <button
@@ -73,7 +113,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             }`}
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{soundEnabled ? 'FX ON' : 'MUTED'}</span>
+            <span className="hidden sm:inline">{soundEnabled ? 'FX' : 'MUTE'}</span>
           </button>
 
           {/* Ambient Rain / White Noise Toggle */}
@@ -91,10 +131,11 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             }`}
           >
             <CloudRain className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{ambientNoise ? 'RAIN ON' : 'RAIN OFF'}</span>
+            <span className="hidden sm:inline">{ambientNoise ? 'RAIN' : 'RAIN OFF'}</span>
           </button>
         </div>
       </div>
     </header>
   );
 };
+

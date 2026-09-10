@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { HardDrive, Calendar, Zap, CheckCircle2, FileText, Trash2, Volume2, Sparkles } from 'lucide-react';
-import { DayActivity, PetState } from '../types';
+import { HardDrive, Calendar, Zap, CheckCircle2, FileText, Trash2, Volume2, Sparkles, User, LogOut, ArrowRightLeft } from 'lucide-react';
+import { DayActivity, PetState, AuthUser } from '../types';
 import { playMechanicalClick, playChiptuneBeep } from '../utils/audio';
 
 interface CartridgeMemoryScreenProps {
@@ -10,6 +10,9 @@ interface CartridgeMemoryScreenProps {
   onUpdateScratchpad: (text: string) => void;
   soundEnabled: boolean;
   onResetData: () => void;
+  currentUser: AuthUser | null;
+  onLogout: () => void;
+  onSwitchAccount: () => void;
 }
 
 export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
@@ -19,6 +22,9 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
   onUpdateScratchpad,
   soundEnabled,
   onResetData,
+  currentUser,
+  onLogout,
+  onSwitchAccount,
 }) => {
   const [saveStatus, setSaveStatus] = useState<'IDLE' | 'SAVING' | 'SAVED'>('IDLE');
 
@@ -44,8 +50,65 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
 
   return (
     <div className="w-full space-y-4">
+      {/* User Account / Profile Card */}
+      <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 pixel-shadow">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#2D3142] pb-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-[#7FB685] border-2 border-[#2D3142] flex items-center justify-center pixel-shadow-sm text-sm">
+              👤
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold text-[#2D3142]">
+                  {currentUser ? currentUser.name : 'Guest User'}
+                </span>
+                <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142]">
+                  @{currentUser ? currentUser.username : 'guest'}
+                </span>
+              </div>
+              <div className="font-sans text-xs text-[#2D3142]/70">
+                {currentUser?.studyMajor || 'General Studies'} • Goal: {currentUser?.dailyGoalMinutes || 45}m/day
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              id="cartridge-switch-account-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                onSwitchAccount();
+              }}
+              className="pixel-btn px-2.5 py-1.5 bg-[#F2EFE9] hover:bg-[#FAF8F5] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] flex items-center gap-1.5"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>SWITCH USER</span>
+            </button>
+
+            <button
+              id="cartridge-logout-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                onLogout();
+              }}
+              className="pixel-btn px-2.5 py-1.5 bg-[#ffdad6] hover:bg-[#ffb4ab] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#93000a] flex items-center gap-1.5 pixel-shadow-sm"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>LOGOUT</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="font-mono text-[10px] text-[#2D3142]/60 flex items-center gap-2">
+          <span>EMAIL: {currentUser?.email || 'guest@study.local'}</span>
+          <span>•</span>
+          <span>REGISTERED: {currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'Active Prototype'}</span>
+        </div>
+      </div>
+
       {/* Cartridge Status Bar */}
       <div className="bg-[#CADBFB] border-2 border-[#2D3142] p-4 pixel-shadow flex flex-wrap items-center justify-between gap-2">
+
         <div className="flex items-center gap-2">
           <HardDrive className="w-5 h-5 text-[#2D3142]" />
           <div>
