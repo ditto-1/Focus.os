@@ -11,7 +11,14 @@ import { SensoryScreen } from './components/SensoryScreen';
 import { CartridgeMemoryScreen } from './components/CartridgeMemoryScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { ScreenTab, TaskItem, RoutineItem, DayActivity, PetState, Subtask, AuthUser } from './types';
-import { INITIAL_TASKS, INITIAL_ROUTINES, INITIAL_WEEK_ACTIVITY, NEW_USER_INITIAL_TASKS } from './data/initialData';
+import {
+  INITIAL_TASKS,
+  INITIAL_ROUTINES,
+  INITIAL_WEEK_ACTIVITY,
+  NEW_USER_INITIAL_TASKS,
+  NEW_USER_ROUTINES,
+  NEW_USER_WEEK_ACTIVITY,
+} from './data/initialData';
 import {
   setAmbientWhiteNoise,
   toggleRetroLofi,
@@ -24,23 +31,12 @@ export default function App() {
   // Active Screen Tab
   const [currentTab, setCurrentTab] = useState<ScreenTab>('whatnow');
 
-  // Authenticated User & Portal state
+  // Authenticated User & Portal state - Defaults to null to present standalone Login/Signup screen
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     const saved = localStorage.getItem('cozy_pixel_current_user');
-    return saved
-      ? JSON.parse(saved)
-      : {
-          id: 'usr-demo-1',
-          username: 'alex',
-          name: 'Alex Chen',
-          email: 'alex@example.com',
-          studyMajor: 'Computer Science (B.Tech)',
-          dailyGoalMinutes: 60,
-          createdAt: Date.now() - 86400000 * 7,
-        };
+    return saved ? JSON.parse(saved) : null;
   });
 
-  const [isAuthScreenVisible, setIsAuthScreenVisible] = useState<boolean>(false);
   const [logoutNotice, setLogoutNotice] = useState<string | null>(null);
 
   // Audio settings
@@ -426,31 +422,32 @@ export default function App() {
     }
     localStorage.removeItem('cozy_pixel_current_user');
     setCurrentUser(null);
-    setIsAuthScreenVisible(true);
-    setLogoutNotice('You have been logged out. Your memory cartridge has been safely preserved.');
+    setLogoutNotice('Cartridge ejected safely! Your progress has been safely stored in memory.');
     playMechanicalClick(soundEnabled);
   };
 
   const handleLoginSuccess = (user: AuthUser, isNewUser: boolean) => {
     setCurrentUser(user);
     localStorage.setItem('cozy_pixel_current_user', JSON.stringify(user));
-    setIsAuthScreenVisible(false);
     setLogoutNotice(null);
 
-    if (isNewUser) {
-      // Initialize welcoming starter cartridge for new user
+    // If new user, demo fresh user (usr-demo-0), or standard student starting fresh:
+    if (isNewUser || user.id === 'usr-demo-0' || user.username === 'taylor' || user.username === 'student') {
+      // Initialize welcoming Level 0 starter cartridge
       setTasks(NEW_USER_INITIAL_TASKS);
       setActiveFocusTask(NEW_USER_INITIAL_TASKS[0]);
+      setRoutines(NEW_USER_ROUTINES);
+      setActivityLog(NEW_USER_WEEK_ACTIVITY);
       setPet({
         name: 'Sprout',
-        level: 1,
+        level: 0,
         exp: 0,
-        maxExp: 50,
-        mood: 'happy',
-        berriesFed: 2,
+        maxExp: 30,
+        mood: 'sleeping',
+        berriesFed: 0,
       });
       setScratchpad(
-        `• Welcome to Cozy Pocket, ${user.name}!\n• Academic focus: ${user.studyMajor || 'Your studies'}\n• Daily Target: ${user.dailyGoalMinutes || 45} minutes\n• Try your first gentle 10-minute sprint to level up Sprout.`
+        `• Welcome to Cozy Pocket, ${user.name}!\n• Academic focus: ${user.studyMajor || 'Your studies'}\n• Daily Target: ${user.dailyGoalMinutes || 30} minutes\n• Level 0 Cartridge initialized. Take your first gentle 5-minute study sprint to awaken Sprout!`
       );
       setCurrentTab('whatnow');
     }
@@ -462,15 +459,46 @@ export default function App() {
       username: 'guest',
       name: 'Guest Explorer',
       email: 'guest@study.local',
-      studyMajor: 'Self-Paced Exploration',
+      studyMajor: 'Self-Paced Study',
       dailyGoalMinutes: 30,
       createdAt: Date.now(),
     };
     setCurrentUser(guestUser);
     localStorage.setItem('cozy_pixel_current_user', JSON.stringify(guestUser));
-    setIsAuthScreenVisible(false);
     setLogoutNotice(null);
+
+    // Fresh Level 0 setup for guest
+    setTasks(NEW_USER_INITIAL_TASKS);
+    setActiveFocusTask(NEW_USER_INITIAL_TASKS[0]);
+    setRoutines(NEW_USER_ROUTINES);
+    setActivityLog(NEW_USER_WEEK_ACTIVITY);
+    setPet({
+      name: 'Sprout',
+      level: 0,
+      exp: 0,
+      maxExp: 30,
+      mood: 'sleeping',
+      berriesFed: 0,
+    });
+    setScratchpad(
+      `• Welcome Guest Explorer!\n• Level: 0 (Day 1 Cartridge)\n• Daily Target: 30 minutes\n• Complete your first focus timer to wake Sprout up!`
+    );
+    setCurrentTab('whatnow');
   };
+
+  // If user is not authenticated, show ONLY the whimsical standalone Login/Signup page
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] text-[#2D3142] flex flex-col font-sans selection:bg-[#B4C5E4]">
+        <AuthScreen
+          onLoginSuccess={handleLoginSuccess}
+          onContinueAsGuest={handleContinueAsGuest}
+          soundEnabled={soundEnabled}
+          logoutNotice={logoutNotice}
+        />
+      </div>
+    );
+  }
 
   const activeTasksCount = tasks.filter((t) => !t.completed).length;
 
@@ -485,7 +513,7 @@ export default function App() {
           ambientNoise={ambientNoise}
           onToggleAmbient={handleToggleAmbient}
           currentUser={currentUser}
-          onOpenAuth={() => setIsAuthScreenVisible(true)}
+          onOpenAuth={handleLogout}
           onLogout={handleLogout}
         />
 
@@ -494,13 +522,7 @@ export default function App() {
           {/* Navigation Cartridge Slot Tabs */}
           <NavigationTabs
             currentTab={currentTab}
-            onSelectTab={(tab) => {
-              // If user is navigating tabs, dismiss auth overlay if logged in
-              if (currentUser && isAuthScreenVisible) {
-                setIsAuthScreenVisible(false);
-              }
-              setCurrentTab(tab);
-            }}
+            onSelectTab={(tab) => setCurrentTab(tab)}
             soundEnabled={soundEnabled}
             activeTasksCount={activeTasksCount}
           />
@@ -515,115 +537,85 @@ export default function App() {
 
           {/* Active Screen Display Area */}
           <div className="w-full transition-all">
-            {/* When not logged in or when auth screen is opened explicitly */}
-            {(!currentUser || isAuthScreenVisible) ? (
-              <div className="space-y-3">
-                {currentUser && (
-                  <div className="flex items-center justify-between bg-[#F2EFE9] border-2 border-[#2D3142] px-3 py-2 pixel-shadow-sm">
-                    <span className="font-mono text-xs text-[#2D3142]">
-                      Currently signed in as: <strong>{currentUser.name}</strong> (@{currentUser.username})
-                    </span>
-                    <button
-                      onClick={() => {
-                        playMechanicalClick(soundEnabled);
-                        setIsAuthScreenVisible(false);
-                      }}
-                      className="pixel-btn px-2.5 py-1 bg-[#FAF8F5] hover:bg-[#CADBFB] border border-[#2D3142] font-mono text-[11px] font-bold text-[#2D3142]"
-                    >
-                      RETURN TO CARTRIDGE ✕
-                    </button>
-                  </div>
-                )}
-                <AuthScreen
-                  onLoginSuccess={handleLoginSuccess}
-                  onContinueAsGuest={handleContinueAsGuest}
-                  soundEnabled={soundEnabled}
-                  logoutNotice={logoutNotice}
-                />
-              </div>
-            ) : (
-              <>
-                {/* Screen 1: Focus Engine & Objective */}
-                {currentTab === 'focus' && (
-                  <FocusScreen
-                    soundEnabled={soundEnabled}
-                    onSessionComplete={handleSessionComplete}
-                    isTimerRunning={isTimerRunning}
-                    setIsTimerRunning={setIsTimerRunning}
-                    activeTask={activeFocusTask}
-                    onClearActiveTask={() => setActiveFocusTask(null)}
-                    onToggleSubtask={handleToggleSubtask}
-                    onCompleteTask={handleToggleTask}
-                    isRetroLofiActive={isRetroLofiActive}
-                    onToggleRetroLofi={handleToggleRetroLofi}
-                    onOpenMusicTab={() => setCurrentTab('music')}
-                  />
-                )}
+            {/* Screen 1: Focus Engine & Objective */}
+            {currentTab === 'focus' && (
+              <FocusScreen
+                soundEnabled={soundEnabled}
+                onSessionComplete={handleSessionComplete}
+                isTimerRunning={isTimerRunning}
+                setIsTimerRunning={setIsTimerRunning}
+                activeTask={activeFocusTask}
+                onClearActiveTask={() => setActiveFocusTask(null)}
+                onToggleSubtask={handleToggleSubtask}
+                onCompleteTask={handleToggleTask}
+                isRetroLofiActive={isRetroLofiActive}
+                onToggleRetroLofi={handleToggleRetroLofi}
+                onOpenMusicTab={() => setCurrentTab('music')}
+              />
+            )}
 
-                {/* Screen 2: "What Should I Do Now?" Adaptive Prioritization Recommender */}
-                {currentTab === 'whatnow' && (
-                  <WhatShouldIDoNow
-                    tasks={tasks}
-                    onStartFocusOnTask={handleStartFocusOnTask}
-                    onBreakdownTask={handleBreakdownTask}
-                    soundEnabled={soundEnabled}
-                  />
-                )}
+            {/* Screen 2: "What Should I Do Now?" Adaptive Prioritization Recommender */}
+            {currentTab === 'whatnow' && (
+              <WhatShouldIDoNow
+                tasks={tasks}
+                onStartFocusOnTask={handleStartFocusOnTask}
+                onBreakdownTask={handleBreakdownTask}
+                soundEnabled={soundEnabled}
+              />
+            )}
 
-                {/* Screen 3: Adaptive Task Planner & AI Breakdown */}
-                {currentTab === 'planner' && (
-                  <TaskPlanner
-                    tasks={tasks}
-                    onToggleTask={handleToggleTask}
-                    onToggleSubtask={handleToggleSubtask}
-                    onAddTask={handleAddTask}
-                    onDeleteTask={handleDeleteTask}
-                    onBreakdownTask={handleBreakdownTask}
-                    onStartFocusOnTask={handleStartFocusOnTask}
-                    soundEnabled={soundEnabled}
-                    isBreakingDownId={isBreakingDownId}
-                  />
-                )}
+            {/* Screen 3: Adaptive Task Planner & AI Breakdown */}
+            {currentTab === 'planner' && (
+              <TaskPlanner
+                tasks={tasks}
+                onToggleTask={handleToggleTask}
+                onToggleSubtask={handleToggleSubtask}
+                onAddTask={handleAddTask}
+                onDeleteTask={handleDeleteTask}
+                onBreakdownTask={handleBreakdownTask}
+                onStartFocusOnTask={handleStartFocusOnTask}
+                soundEnabled={soundEnabled}
+                isBreakingDownId={isBreakingDownId}
+              />
+            )}
 
-                {/* Screen 4: Recurring Routines & Habit Tracker */}
-                {currentTab === 'routines' && (
-                  <RoutinesScreen
-                    routines={routines}
-                    onToggleRoutine={handleToggleRoutine}
-                    onAddRoutine={handleAddRoutine}
-                    soundEnabled={soundEnabled}
-                  />
-                )}
+            {/* Screen 4: Recurring Routines & Habit Tracker */}
+            {currentTab === 'routines' && (
+              <RoutinesScreen
+                routines={routines}
+                onToggleRoutine={handleToggleRoutine}
+                onAddRoutine={handleAddRoutine}
+                soundEnabled={soundEnabled}
+              />
+            )}
 
-                {/* Screen 5: Spotify & Apple Music Controller */}
-                {currentTab === 'music' && (
-                  <MusicController
-                    soundEnabled={soundEnabled}
-                    isRetroLofiActive={isRetroLofiActive}
-                    onToggleRetroLofi={handleToggleRetroLofi}
-                  />
-                )}
+            {/* Screen 5: Spotify & Apple Music Controller */}
+            {currentTab === 'music' && (
+              <MusicController
+                soundEnabled={soundEnabled}
+                isRetroLofiActive={isRetroLofiActive}
+                onToggleRetroLofi={handleToggleRetroLofi}
+              />
+            )}
 
-                {/* Screen 6: Sensory Grounding & Tactile Fidgets */}
-                {currentTab === 'sensory' && (
-                  <SensoryScreen soundEnabled={soundEnabled} />
-                )}
+            {/* Screen 6: Sensory Grounding & Tactile Fidgets */}
+            {currentTab === 'sensory' && (
+              <SensoryScreen soundEnabled={soundEnabled} />
+            )}
 
-                {/* Screen 7: Memory Cartridge, Activity Heatmap & Brain Dump */}
-                {currentTab === 'cartridge' && (
-                  <CartridgeMemoryScreen
-                    activityLog={activityLog}
-                    pet={pet}
-                    scratchpad={scratchpad}
-                    onUpdateScratchpad={setScratchpad}
-                    soundEnabled={soundEnabled}
-                    onResetData={handleResetData}
-                    currentUser={currentUser}
-                    onLogout={handleLogout}
-                    onSwitchAccount={() => setIsAuthScreenVisible(true)}
-                  />
-                )}
-              </>
+            {/* Screen 7: Memory Cartridge, Activity Heatmap & Brain Dump */}
+            {currentTab === 'cartridge' && (
+              <CartridgeMemoryScreen
+                activityLog={activityLog}
+                pet={pet}
+                scratchpad={scratchpad}
+                onUpdateScratchpad={setScratchpad}
+                soundEnabled={soundEnabled}
+                onResetData={handleResetData}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                onSwitchAccount={handleLogout}
+              />
             )}
           </div>
         </main>

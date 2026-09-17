@@ -262,7 +262,7 @@ export const NEW_USER_INITIAL_TASKS: TaskItem[] = [
     category: 'wellness',
     notes: 'Welcome to your cartridge! Try pressing Start in the Focus screen.',
     subtasks: [
-      { id: 'nu-sub-1', title: 'Put phone on Do Not Disturb', estimatedMinutes: 2, staminaPoints: 1, completed: true },
+      { id: 'nu-sub-1', title: 'Put phone on Do Not Disturb', estimatedMinutes: 2, staminaPoints: 1, completed: false },
       { id: 'nu-sub-2', title: 'Start a gentle 10-minute timer', estimatedMinutes: 8, staminaPoints: 1, completed: false },
     ],
     createdAt: Date.now(),
@@ -296,5 +296,45 @@ export const NEW_USER_INITIAL_TASKS: TaskItem[] = [
     subtasks: [],
     createdAt: Date.now(),
   },
+];
+
+export const NEW_USER_ROUTINES: RoutineItem[] = [
+  {
+    id: 'nu-rt-1',
+    title: 'Morning desk reset & drink cold water',
+    timeOfDay: 'morning',
+    iconName: 'sun',
+    streak: 0,
+    completedToday: false,
+    staminaReward: 1,
+  },
+  {
+    id: 'nu-rt-2',
+    title: 'First 10-minute focus sprint on top priority',
+    timeOfDay: 'afternoon',
+    iconName: 'sparkles',
+    streak: 0,
+    completedToday: false,
+    staminaReward: 2,
+  },
+  {
+    id: 'nu-rt-3',
+    title: 'Night brain dump & set tomorrow goal',
+    timeOfDay: 'evening',
+    iconName: 'moon',
+    streak: 0,
+    completedToday: false,
+    staminaReward: 1,
+  },
+];
+
+export const NEW_USER_WEEK_ACTIVITY: DayActivity[] = [
+  { date: 'Mon', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Tue', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Wed', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Thu', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Fri', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Sat', minutesFocused: 0, questsCompleted: 0, level: 0 },
+  { date: 'Sun', minutesFocused: 0, questsCompleted: 0, level: 0 },
 ];
 

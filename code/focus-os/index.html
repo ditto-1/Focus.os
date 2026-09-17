@@ -3,6 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          if (typeof window !== 'undefined') {
+            var origFetch = window.fetch ? window.fetch.bind(window) : null;
+            var activeFetch = origFetch;
+            var descriptor = {
+              get: function () {
+                return activeFetch;
+              },
+              set: function (newFetch) {
+                activeFetch = typeof newFetch === 'function' ? newFetch.bind(window) : newFetch;
+              },
+              configurable: true,
+              enumerable: true,
+            };
+            try {
+              Object.defineProperty(window, 'fetch', descriptor);
+            } catch (e1) {}
+            if (typeof Window !== 'undefined' && Window.prototype) {
+              try {
+                Object.defineProperty(Window.prototype, 'fetch', descriptor);
+              } catch (e2) {}
+            }
+          }
+        } catch (err) {
+          console.warn('Fetch setter shim warning:', err);
+        }
+      })();
+    </script>
     <title>Cozy Pastel Pixel</title>
     <meta name="description" content="Tactile retro handheld focus & mindfulness companion with adaptive 'What should I do now?' planning, AI task breakdown, Spotify/Apple Music focus controller, recurring routines, and digital pocket buddy." />
     <meta property="og:title" content="Cozy Pastel Pixel" />

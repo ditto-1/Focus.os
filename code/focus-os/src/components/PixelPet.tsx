@@ -26,6 +26,13 @@ export const PixelPet: React.FC<PixelPetProps> = ({
         '"I\'m studying alongside you!"',
         '"Breathing softly with you..."',
       ]
+    : pet.level === 0
+    ? [
+        '"Zzz... Sprout is a newborn seedling at Level 0! 🌱"',
+        '"Start your first focus timer to wake me up!"',
+        '"Feed me a berry or finish a task to gain your first XP!"',
+        '"A fresh cartridge! We are beginning from Day 1 together ✨"',
+      ]
     : [
         '"Hello friend! Ready for a cozy focus session?"',
         '"Don\'t forget to drink some water today."',
@@ -59,7 +66,7 @@ export const PixelPet: React.FC<PixelPetProps> = ({
             PET COMPANION
           </span>
           <span className="font-mono text-xs font-bold text-[#2D3142]">
-            {pet.name} (LVL {pet.level})
+            {pet.name} (LVL {pet.level}{pet.level === 0 ? ' • SEEDLING' : ''})
           </span>
         </div>
         <div className="flex items-center gap-1 font-mono text-[10px] text-[#2D3142]">
@@ -111,6 +118,14 @@ export const PixelPet: React.FC<PixelPetProps> = ({
                   <rect x="9" y="11" width="1" height="1" fill="#FFFFFF" />
                   <rect x="14" y="11" width="1" height="1" fill="#FFFFFF" />
                 </>
+              ) : pet.level === 0 || pet.mood === 'sleeping' ? (
+                // Cute sleeping / seedling curved eyes with peaceful rest
+                <>
+                  <rect x="8" y="12" width="3" height="1" fill="#2D3142" />
+                  <rect x="8" y="11" width="1" height="1" fill="#2D3142" />
+                  <rect x="13" y="12" width="3" height="1" fill="#2D3142" />
+                  <rect x="15" y="11" width="1" height="1" fill="#2D3142" />
+                </>
               ) : (
                 // Happy blinking eyes
                 <>
@@ -134,11 +149,18 @@ export const PixelPet: React.FC<PixelPetProps> = ({
               <rect x="8" y="19" width="2" height="2" fill="#35693F" />
               <rect x="14" y="19" width="2" height="2" fill="#35693F" />
             </svg>
+
+            {/* Zzz floating indicator if level 0 */}
+            {pet.level === 0 && !isFocusActive && (
+              <span className="absolute -top-1 right-1 font-mono text-[10px] font-bold text-[#7FB685] animate-pulse">
+                Zzz...
+              </span>
+            )}
           </div>
 
           {/* Status badge */}
           <div className="mt-1 font-mono text-[10px] uppercase font-bold text-[#2D3142] px-2 py-0.5 bg-[#FAF8F5] border border-[#2D3142]">
-            {isFocusActive ? '⚡ IN THE ZONE' : '💤 RESTING'}
+            {isFocusActive ? '⚡ IN THE ZONE' : pet.level === 0 ? '🌱 SEEDLING (LVL 0)' : '💤 RESTING'}
           </div>
         </div>
 

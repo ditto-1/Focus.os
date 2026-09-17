@@ -35,6 +35,16 @@ async function startServer() {
 
   const USERS: StoredUser[] = [
     {
+      id: 'usr-demo-0',
+      username: 'student',
+      name: 'Taylor Reed (Newbie)',
+      email: 'student@study.local',
+      passwordHash: 'password123',
+      studyMajor: 'Cognitive Science & Psychology',
+      dailyGoalMinutes: 30,
+      createdAt: Date.now(),
+    },
+    {
       id: 'usr-demo-1',
       username: 'alex',
       name: 'Alex Chen',
