@@ -494,6 +494,7 @@ export default function App() {
           onLoginSuccess={handleLoginSuccess}
           onContinueAsGuest={handleContinueAsGuest}
           soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled(!soundEnabled)}
           logoutNotice={logoutNotice}
         />
       </div>
