@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, CloudRain, BatteryCharging, Sparkles, LogOut, LogIn, User } from 'lucide-react';
+import { Volume2, VolumeX, CloudRain, BatteryCharging, Sparkles, LogOut, LogIn, User, Settings } from 'lucide-react';
 import { playMechanicalClick } from '../utils/audio';
 import { AuthUser } from '../types';
 
@@ -11,6 +11,7 @@ interface ConsoleHeaderProps {
   currentUser: AuthUser | null;
   onOpenAuth: () => void;
   onLogout: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
@@ -21,6 +22,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
   currentUser,
   onOpenAuth,
   onLogout,
+  onOpenSettings,
 }) => {
   return (
     <header className="w-full bg-[#FAF8F5] border-b-2 border-[#2D3142] pb-3 pt-2 px-3 sm:px-6 select-none">
@@ -133,6 +135,22 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
             <CloudRain className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{ambientNoise ? 'RAIN' : 'RAIN OFF'}</span>
           </button>
+
+          {/* Settings & Font Config Button */}
+          {onOpenSettings && (
+            <button
+              id="header-settings-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                onOpenSettings();
+              }}
+              title="Open console settings, fonts & pet configuration"
+              className="pixel-btn flex items-center gap-1 px-2 py-1 bg-[#FAF8F5] hover:bg-[#CADBFB] border-2 border-[#2D3142] font-mono text-[11px] font-bold text-[#2D3142] pixel-shadow-sm"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">SETTINGS</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

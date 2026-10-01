@@ -80,38 +80,38 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
   const alternativeMatches = scoredTasks.slice(1, 3);
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3 sm:space-y-4">
       {/* Context Assessment Form (Available Time & Energy) */}
-      <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 sm:p-5 pixel-shadow">
-        <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-3">
+      <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-3 sm:p-5 pixel-shadow">
+        <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-2.5">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#7FB685]" />
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#7FB685]" />
             <span className="font-mono text-xs sm:text-sm font-bold text-[#2D3142] uppercase">
-              "WHAT SHOULD I DO NOW?" ENGINE
+              RECOMMENDER
             </span>
           </div>
-          <span className="font-mono text-[10px] px-2 py-0.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142]">
-            ADAPTIVE PLANNING
+          <span className="font-mono text-[10px] px-2 py-0.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142] rounded-xs">
+            ADAPTIVE
           </span>
         </div>
 
-        <p className="font-sans text-xs text-[#2D3142]/80 mb-3">
+        <p className="hidden sm:block font-sans text-xs text-[#2D3142]/80 mb-3">
           Combats task paralysis and decision fatigue. Tell us how much time and energy you have right now, and the system recommends the single highest-impact action.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
           {/* Time Budget */}
           <div>
-            <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#2D3142] mb-1.5">
+            <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#2D3142] mb-1">
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                <span>AVAILABLE TIME RIGHT NOW:</span>
+                <span>TIME AVAILABLE:</span>
               </span>
-              <span className="px-1.5 bg-[#F4A261] border border-[#2D3142] text-[#2D3142]">
-                {availableMinutes} MINS
+              <span className="px-1.5 bg-[#F4A261] border border-[#2D3142] text-[#2D3142] text-[10px]">
+                {availableMinutes}M
               </span>
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
               {[15, 25, 40, 60].map((mins) => (
                 <button
                   key={mins}
@@ -120,7 +120,7 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
                     playMechanicalClick(soundEnabled);
                     setAvailableMinutes(mins);
                   }}
-                  className={`pixel-btn py-1.5 border-2 border-[#2D3142] font-mono text-xs font-bold ${
+                  className={`pixel-btn py-1 border-2 border-[#2D3142] font-mono text-xs font-bold rounded-xs ${
                     availableMinutes === mins
                       ? 'bg-[#7FB685] text-[#2D3142] pixel-shadow-sm'
                       : 'bg-[#F2EFE9] text-[#2D3142]/70'
@@ -134,20 +134,20 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
 
           {/* Energy Level */}
           <div>
-            <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#2D3142] mb-1.5">
+            <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#2D3142] mb-1">
               <span className="flex items-center gap-1">
                 <Zap className="w-3.5 h-3.5" />
-                <span>CURRENT ENERGY LEVEL:</span>
+                <span>ENERGY LEVEL:</span>
               </span>
-              <span className="uppercase px-1.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142]">
+              <span className="uppercase px-1.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142] text-[10px]">
                 {energyLevel}
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
               {[
-                { id: 'low' as const, label: 'LOW (1 SP)' },
-                { id: 'med' as const, label: 'MED (2 SP)' },
-                { id: 'high' as const, label: 'HIGH (3 SP)' },
+                { id: 'low' as const, label: 'LOW' },
+                { id: 'med' as const, label: 'MED' },
+                { id: 'high' as const, label: 'HIGH' },
               ].map((lvl) => (
                 <button
                   key={lvl.id}
@@ -156,7 +156,7 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
                     playMechanicalClick(soundEnabled);
                     setEnergyLevel(lvl.id);
                   }}
-                  className={`pixel-btn py-1.5 border-2 border-[#2D3142] font-mono text-[11px] font-bold ${
+                  className={`pixel-btn py-1 border-2 border-[#2D3142] font-mono text-xs font-bold rounded-xs ${
                     energyLevel === lvl.id
                       ? 'bg-[#F8C390] text-[#2D3142] pixel-shadow-sm'
                       : 'bg-[#F2EFE9] text-[#2D3142]/70'
@@ -172,45 +172,45 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
 
       {/* Recommended Task Showcase Card */}
       {bestMatch ? (
-        <div className="bg-[#CADBFB] border-2 border-[#2D3142] p-5 pixel-shadow relative overflow-hidden">
+        <div className="bg-[#CADBFB] border-2 border-[#2D3142] p-3.5 sm:p-5 pixel-shadow relative overflow-hidden rounded-xs">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#2D3142] pb-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142]">
-                TOP RECOMMENDED ACTION
+          <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-2.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-mono text-[10px] sm:text-xs font-bold px-1.5 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142] rounded-xs uppercase shrink-0">
+                RECOMMENDED
               </span>
-              <span className="font-mono text-xs text-[#2D3142] font-bold">
-                EST. {bestMatch.task.estimatedMinutes} MINS • {bestMatch.task.staminaPoints} SP
+              <span className="font-mono text-[10px] text-[#2D3142]/80 truncate">
+                ~{bestMatch.task.estimatedMinutes}m · +{bestMatch.task.staminaPoints} SP
               </span>
             </div>
-            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[#FAF8F5] border border-[#2D3142] text-[#2D3142]">
-              MATCH SCORE: {Math.round(bestMatch.score)}
+            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[#FAF8F5] border border-[#2D3142] text-[#2D3142] rounded-xs shrink-0">
+              SCORE {Math.round(bestMatch.score)}
             </span>
           </div>
 
           {/* Task Title & Details */}
-          <div className="space-y-1 mb-4">
-            <h2 className="font-mono text-lg sm:text-xl font-bold text-[#2D3142]">
+          <div className="space-y-1 mb-3">
+            <h2 className="font-mono text-base sm:text-xl font-bold text-[#2D3142] leading-snug break-words">
               {bestMatch.task.title}
             </h2>
             {bestMatch.task.notes && (
-              <p className="font-sans text-xs sm:text-sm text-[#2D3142]/80">
+              <p className="font-sans text-xs text-[#2D3142]/85 bg-[#FAF8F5]/80 p-2 rounded-xs border border-[#2D3142]/15 leading-relaxed break-words">
                 {bestMatch.task.notes}
               </p>
             )}
           </div>
 
           {/* Transparent Reasoning Section (Per Proposal Section 5.1) */}
-          <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-3 mb-4 pixel-inset-soft">
-            <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#2D3142] uppercase mb-1.5">
-              <Lightbulb className="w-3.5 h-3.5 text-[#F4A261]" />
-              <span>WHY THIS RECOMMENDATION? (TRANSPARENT RATIONALE)</span>
+          <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 sm:p-3 mb-3 pixel-inset-soft rounded-xs">
+            <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#2D3142] uppercase mb-1">
+              <Lightbulb className="w-3.5 h-3.5 text-[#F4A261] shrink-0" />
+              <span>WHY THIS RECOMMENDATION?</span>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-1 text-xs">
               {bestMatch.reasons.map((r, i) => (
-                <li key={i} className="font-sans text-xs text-[#2D3142] flex items-center gap-2">
-                  <span className="text-[#35693F] font-bold">✓</span>
-                  <span>{r}</span>
+                <li key={i} className="font-sans text-[11px] sm:text-xs text-[#2D3142] flex items-start gap-1.5 leading-snug">
+                  <span className="text-[#35693F] font-bold shrink-0 mt-0.5">✓</span>
+                  <span className="break-words">{r}</span>
                 </li>
               ))}
             </ul>
@@ -218,18 +218,18 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
 
           {/* Subtasks if any */}
           {bestMatch.task.subtasks.length > 0 && (
-            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-3 mb-4">
+            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 sm:p-3 mb-3 rounded-xs">
               <div className="font-mono text-[10px] font-bold text-[#2D3142] uppercase mb-1.5">
                 SUBTASK CHECKLIST ({bestMatch.task.subtasks.filter(s => s.completed).length}/{bestMatch.task.subtasks.length} DONE):
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {bestMatch.task.subtasks.map((sub) => (
-                  <div key={sub.id} className="flex items-center gap-2 font-sans text-xs text-[#2D3142]">
-                    <span className="font-mono text-[10px] text-[#7FB685] font-bold">
+                  <div key={sub.id} className="flex items-start gap-2 font-sans text-xs text-[#2D3142]">
+                    <span className="font-mono text-[10px] text-[#7FB685] font-bold shrink-0 mt-0.5">
                       {sub.completed ? '☑' : '☐'}
                     </span>
-                    <span className={sub.completed ? 'line-through opacity-60' : ''}>
-                      {sub.title} ({sub.estimatedMinutes}m)
+                    <span className={`break-words leading-snug ${sub.completed ? 'line-through opacity-60' : ''}`}>
+                      {sub.title} <span className="font-mono text-[10px] text-[#2D3142]/70">({sub.estimatedMinutes}m)</span>
                     </span>
                   </div>
                 ))}
@@ -238,7 +238,7 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               id="start-recommended-focus-btn"
               onClick={() => {
@@ -246,10 +246,10 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
                 playChiptuneBeep(659, soundEnabled);
                 onStartFocusOnTask(bestMatch.task);
               }}
-              className="pixel-btn flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-sm font-bold text-[#2D3142] pixel-shadow"
+              className="pixel-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-xs sm:text-sm font-bold text-[#2D3142] pixel-shadow-sm rounded-xs"
             >
-              <span>START FOCUS ON THIS TASK</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>START FOCUS TIMER</span>
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
 
             {bestMatch.task.subtasks.length === 0 && (
@@ -259,16 +259,16 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
                   playMechanicalClick(soundEnabled);
                   onBreakdownTask(bestMatch.task.id);
                 }}
-                className="pixel-btn flex items-center justify-center gap-1.5 px-3 py-3 bg-[#FAF8F5] hover:bg-[#F2EFE9] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm"
+                className="pixel-btn flex items-center justify-center gap-1.5 px-3 py-2 bg-[#FAF8F5] hover:bg-[#F2EFE9] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm rounded-xs"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#F4A261]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#F4A261] shrink-0" />
                 <span>BREAK DOWN (AI)</span>
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="bg-[#FAF8F5] border-2 border-dashed border-[#2D3142] p-8 text-center">
+        <div className="bg-[#FAF8F5] border-2 border-dashed border-[#2D3142] p-8 text-center rounded-xs">
           <p className="font-mono text-xs font-bold text-[#2D3142]">
             ALL ACTIVE TASKS ARE COMPLETE!
           </p>
@@ -280,12 +280,12 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
 
       {/* Alternative Recommendations (User Override Option per Section 10) */}
       {alternativeMatches.length > 0 && (
-        <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-4 pixel-shadow">
+        <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-3 sm:p-4 pixel-shadow rounded-xs">
           <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-2">
             <span className="font-mono text-xs font-bold uppercase text-[#2D3142]">
-              OVERRIDE: OTHER SUITABLE CANDIDATES
+              OTHER CANDIDATES
             </span>
-            <span className="font-mono text-[10px] text-[#2D3142]/70">
+            <span className="font-mono text-[10px] text-[#2D3142]/70 hidden sm:inline">
               NOT FEELING THE TOP CHOICE? PICK ONE:
             </span>
           </div>
@@ -294,14 +294,18 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
             {alternativeMatches.map(({ task, reasons }) => (
               <div
                 key={task.id}
-                className="bg-[#FAF8F5] border-2 border-[#2D3142] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pixel-shadow-sm"
+                className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pixel-shadow-sm rounded-xs"
               >
-                <div>
-                  <div className="font-mono text-xs font-bold text-[#2D3142]">
+                <div className="min-w-0">
+                  <div className="font-mono text-xs sm:text-sm font-bold text-[#2D3142] leading-snug break-words">
                     {task.title}
                   </div>
-                  <div className="font-sans text-[11px] text-[#2D3142]/70">
-                    Est. {task.estimatedMinutes}m • {task.priority.toUpperCase()} priority • {reasons[0]}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-[11px] font-sans text-[#2D3142]/70 mt-1">
+                    <span className="font-mono text-[9px] font-bold uppercase px-1 border border-[#2D3142] bg-[#CADBFB]">{task.priority}</span>
+                    <span>·</span>
+                    <span className="font-mono text-[10px]">~{task.estimatedMinutes}m</span>
+                    <span>·</span>
+                    <span className="truncate max-w-[200px] sm:max-w-none">{reasons[0]}</span>
                   </div>
                 </div>
 
@@ -311,7 +315,7 @@ export const WhatShouldIDoNow: React.FC<WhatShouldIDoNowProps> = ({
                     playMechanicalClick(soundEnabled);
                     onStartFocusOnTask(task);
                   }}
-                  className="pixel-btn px-3 py-1.5 bg-[#CADBFB] hover:bg-[#B4C5E4] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] whitespace-nowrap self-start sm:self-center"
+                  className="pixel-btn px-3 py-1.5 bg-[#CADBFB] hover:bg-[#B4C5E4] border border-[#2D3142] font-mono text-[11px] sm:text-xs font-bold text-[#2D3142] whitespace-nowrap self-stretch sm:self-center text-center rounded-xs"
                 >
                   FOCUS THIS INSTEAD →
                 </button>

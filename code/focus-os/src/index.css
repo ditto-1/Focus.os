@@ -4,6 +4,8 @@
   :root {
     --font-mono: 'Space Mono', monospace;
     --font-sans: 'Plus Jakarta Sans', sans-serif;
+    --app-letter-spacing: normal;
+    --app-line-height: normal;
   }
 
   body {
@@ -11,11 +13,63 @@
     background-color: #FAF8F5;
     color: #2D3142;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: var(--app-letter-spacing);
+    line-height: var(--app-line-height);
   }
 
   h1, h2, h3, h4, h5, h6, .font-mono-display {
     font-family: var(--font-mono);
   }
+}
+
+/* Font Family Themes */
+body.font-family-default {
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+body.font-family-mono {
+  --font-sans: 'Space Mono', monospace;
+  --font-mono: 'Space Mono', monospace;
+}
+
+body.font-family-lexend {
+  --font-sans: 'Lexend', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+body.font-family-dyslexic {
+  --font-sans: 'Comic Neue', 'Lexend', cursive, sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+body.font-family-arcade {
+  --font-sans: 'VT323', monospace;
+  --font-mono: 'VT323', monospace;
+}
+
+/* Font Size Scales */
+body.font-size-compact {
+  font-size: 0.92rem;
+}
+
+body.font-size-standard {
+  font-size: 1rem;
+}
+
+body.font-size-large {
+  font-size: 1.08rem;
+}
+
+body.font-size-extralarge {
+  font-size: 1.18rem;
+}
+
+/* Neurodivergent / Dyslexic Roomy Spacing */
+body.font-spacing-roomy {
+  --app-letter-spacing: 0.04em;
+  --app-line-height: 1.65;
+  word-spacing: 0.08em;
 }
 
 /* Hard pixel shadows without blur */

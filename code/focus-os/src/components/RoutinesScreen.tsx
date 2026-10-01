@@ -45,13 +45,13 @@ export const RoutinesScreen: React.FC<RoutinesScreenProps> = ({
         {list.map((routine) => (
           <div
             key={routine.id}
-            className={`flex items-center justify-between p-2.5 border-2 border-[#2D3142] transition-colors ${
+            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 border-2 border-[#2D3142] transition-colors rounded-xs ${
               routine.completedToday
                 ? 'bg-[#E4DFD5]/60 opacity-80'
                 : 'bg-[#F2EFE9] hover:bg-[#FAF8FF] pixel-shadow-sm'
             }`}
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-start sm:items-center gap-2.5 flex-1 min-w-0">
               <button
                 id={`routine-check-${routine.id}`}
                 onClick={() => {
@@ -62,13 +62,13 @@ export const RoutinesScreen: React.FC<RoutinesScreenProps> = ({
                   }
                   onToggleRoutine(routine.id);
                 }}
-                className="pixel-btn w-5 h-5 border-2 border-[#2D3142] bg-[#FAF8F5] flex items-center justify-center shrink-0 pixel-shadow-sm"
+                className="pixel-btn w-5 h-5 mt-0.5 sm:mt-0 border-2 border-[#2D3142] bg-[#FAF8F5] flex items-center justify-center shrink-0 pixel-shadow-sm rounded-xs"
               >
                 {routine.completedToday && <Check className="w-3.5 h-3.5 text-[#35693F] stroke-[3]" />}
               </button>
 
               <span
-                className={`font-sans text-xs sm:text-sm text-[#2D3142] ${
+                className={`font-sans text-xs sm:text-sm text-[#2D3142] leading-snug break-words ${
                   routine.completedToday ? 'line-through text-[#2D3142]/60' : 'font-medium'
                 }`}
               >
@@ -76,14 +76,14 @@ export const RoutinesScreen: React.FC<RoutinesScreenProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center pl-7 sm:pl-0">
               {/* Streak Badge */}
-              <div className="flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[#F8C390] border border-[#2D3142] text-[#2D3142]">
+              <div className="flex items-center gap-1 font-mono text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 bg-[#F8C390] border border-[#2D3142] text-[#2D3142] rounded-2xs">
                 <Flame className="w-3 h-3 fill-[#8E4E14] text-[#8E4E14]" />
-                <span>{routine.streak} DAY STREAK</span>
+                <span>{routine.streak}D STREAK</span>
               </div>
 
-              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142]">
+              <span className="font-mono text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142] rounded-2xs">
                 +{routine.staminaReward} SP
               </span>
             </div>

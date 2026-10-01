@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HardDrive, Calendar, Zap, CheckCircle2, FileText, Trash2, Volume2, Sparkles, User, LogOut, ArrowRightLeft } from 'lucide-react';
+import { HardDrive, Calendar, Zap, CheckCircle2, FileText, Trash2, Volume2, Sparkles, User, LogOut, ArrowRightLeft, Settings } from 'lucide-react';
 import { DayActivity, PetState, AuthUser } from '../types';
 import { playMechanicalClick, playChiptuneBeep } from '../utils/audio';
 
@@ -13,6 +13,7 @@ interface CartridgeMemoryScreenProps {
   currentUser: AuthUser | null;
   onLogout: () => void;
   onSwitchAccount: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
@@ -25,6 +26,7 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
   currentUser,
   onLogout,
   onSwitchAccount,
+  onOpenSettings,
 }) => {
   const [saveStatus, setSaveStatus] = useState<'IDLE' | 'SAVING' | 'SAVED'>('IDLE');
 
@@ -259,6 +261,36 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Console Preferences & Font Settings */}
+      {onOpenSettings && (
+        <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 pixel-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#CADBFB] border-2 border-[#2D3142] rounded-lg flex items-center justify-center pixel-shadow-sm shrink-0">
+              <Settings className="w-5 h-5 text-[#2D3142]" />
+            </div>
+            <div>
+              <div className="font-mono text-xs font-bold text-[#2D3142] uppercase">
+                TYPOGRAPHY, FONTS & PET COMPANION
+              </div>
+              <p className="font-sans text-xs text-[#2D3142]/75 mt-0.5">
+                Switch font families, enable dyslexia-friendly roomy spacing, or change your companion creature.
+              </p>
+            </div>
+          </div>
+
+          <button
+            id="cartridge-open-settings-btn"
+            onClick={() => {
+              playMechanicalClick(soundEnabled);
+              onOpenSettings();
+            }}
+            className="pixel-btn px-4 py-2 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] rounded-lg font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm whitespace-nowrap shrink-0"
+          >
+            CONFIGURE SETTINGS ⚙
+          </button>
+        </div>
+      )}
 
       {/* Diagnostics & 8-Bit Chiptune Sound Test */}
       <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 pixel-shadow">

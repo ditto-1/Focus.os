@@ -1,324 +1,537 @@
-import React, { useState } from 'react';
-import { Sparkles, Eye, Hand, Volume2, Wind, Heart, RotateCcw, Droplets } from 'lucide-react';
-import { SENSORY_GROUNDING_STEPS } from '../data/initialData';
-import { playMechanicalClick, playChiptuneBeep } from '../utils/audio';
+import React, { useState, useEffect, useRef } from 'react';
+import { Wind, Play, Pause, RotateCcw, Volume2, CloudRain, Music, EyeOff, Check, Heart, Sparkles, Moon, Sun } from 'lucide-react';
+import { playMechanicalClick, playGentleBreathTone } from '../utils/audio';
 
 interface SensoryScreenProps {
   soundEnabled: boolean;
+  ambientNoise?: boolean;
+  onToggleAmbient?: () => void;
+  isRetroLofiActive?: boolean;
+  onToggleRetroLofi?: (active: boolean) => void;
+  onNavigateToMusic?: () => void;
 }
 
-export const SensoryScreen: React.FC<SensoryScreenProps> = ({ soundEnabled }) => {
-  // Grounding Step state
-  const [currentStepIdx, setCurrentStepIdx] = useState(0);
-  const [groundingCompleted, setGroundingCompleted] = useState<number[]>([]);
+type BreathingPattern = 'box' | '478' | 'gentle';
 
-  // Fidget Pad states
-  const [bubbles, setBubbles] = useState<boolean[]>([false, false, false, false, false, false, false, false]);
-  const [rockerOn, setRockerOn] = useState(false);
-  const [dialCount, setDialCount] = useState(0);
-  const [metronomeRunning, setMetronomeRunning] = useState(false);
+interface PatternConfig {
+  id: BreathingPattern;
+  name: string;
+  tagline: string;
+  phases: { name: string; duration: number; prompt: string }[];
+}
 
-  // Terrarium water state
-  const [waterDrops, setWaterDrops] = useState(3);
-  const [gardenBlooms, setGardenBlooms] = useState(2);
+const PATTERNS: Record<BreathingPattern, PatternConfig> = {
+  box: {
+    id: 'box',
+    name: 'Box Breathing',
+    tagline: '4 · 4 · 4 · 4 Regulates focus and autonomic nervous system',
+    phases: [
+      { name: 'Inhale', duration: 4, prompt: 'Inhale gently through your nose' },
+      { name: 'Hold', duration: 4, prompt: 'Hold gently, keep your chest soft' },
+      { name: 'Exhale', duration: 4, prompt: 'Release slowly through parted lips' },
+      { name: 'Rest', duration: 4, prompt: 'Rest quietly in the stillness' },
+    ],
+  },
+  '478': {
+    id: '478',
+    name: '4-7-8 Calm Breath',
+    tagline: '4 · 7 · 8 Deep vagal stimulation to soothe anxiety',
+    phases: [
+      { name: 'Inhale', duration: 4, prompt: 'Breathe in quietly through nose' },
+      { name: 'Hold', duration: 7, prompt: 'Hold with ease and relaxed shoulders' },
+      { name: 'Exhale', duration: 8, prompt: 'Slow, complete audible exhale' },
+    ],
+  },
+  gentle: {
+    id: 'gentle',
+    name: 'Gentle Flow',
+    tagline: '3 · 2 · 4 Low-effort rhythmic recovery',
+    phases: [
+      { name: 'Inhale', duration: 3, prompt: 'Soft breath in' },
+      { name: 'Hold', duration: 2, prompt: 'Brief pause' },
+      { name: 'Exhale', duration: 4, prompt: 'Gentle release' },
+    ],
+  },
+};
 
-  // Step grounding
-  const handleCompleteStep = (idx: number) => {
-    playChiptuneBeep(587.33, soundEnabled);
-    if (!groundingCompleted.includes(idx)) {
-      setGroundingCompleted([...groundingCompleted, idx]);
+const PHYSICAL_RELEASES = [
+  { id: 'water', label: 'Take a slow sip of cool water', icon: '💧', tip: 'Hydrates and activates the soothing vagus reflex' },
+  { id: 'shoulders', label: 'Drop your shoulders & unclench your jaw', icon: '🫁', tip: 'Releases subconscious fight-or-flight muscle bracing' },
+  { id: 'eyes', label: 'Look away at something 20 feet away', icon: '👀', tip: 'Relieves optic ciliary muscle fatigue from screens' },
+  { id: 'hands', label: 'Unclench your hands and open your palms', icon: '🤲', tip: 'Signals safety to your nervous system' },
+  { id: 'sigh', label: 'Take one long physiological sigh', icon: '🌬️', tip: 'Double inhale through nose, one long slow exhale' },
+];
+
+export const SensoryScreen: React.FC<SensoryScreenProps> = ({
+  soundEnabled,
+  ambientNoise = false,
+  onToggleAmbient,
+  isRetroLofiActive = false,
+  onToggleRetroLofi,
+  onNavigateToMusic,
+}) => {
+  // Breathing state
+  const [selectedPattern, setSelectedPattern] = useState<BreathingPattern>('box');
+  const [isBreathingActive, setIsBreathingActive] = useState<boolean>(false);
+  const [currentPhaseIdx, setCurrentPhaseIdx] = useState<number>(0);
+  const [secondsRemainingInPhase, setSecondsRemainingInPhase] = useState<number>(PATTERNS.box.phases[0].duration);
+  const [completedCycles, setCompletedCycles] = useState<number>(0);
+
+  // Somatic Checklist state
+  const [completedReleases, setCompletedReleases] = useState<string[]>([]);
+
+  // 2-Minute Rest Mode
+  const [restModeActive, setRestModeActive] = useState<boolean>(false);
+  const [restSecondsLeft, setRestSecondsLeft] = useState<number>(120);
+
+  const activePattern = PATTERNS[selectedPattern];
+  const activePhase = activePattern.phases[currentPhaseIdx];
+
+  // Breath timer loop
+  useEffect(() => {
+    if (!isBreathingActive) return;
+
+    const timer = setInterval(() => {
+      setSecondsRemainingInPhase((prev) => {
+        if (prev <= 1) {
+          // Advance to next phase
+          const nextIdx = (currentPhaseIdx + 1) % activePattern.phases.length;
+          setCurrentPhaseIdx(nextIdx);
+
+          if (nextIdx === 0) {
+            setCompletedCycles((c) => c + 1);
+          }
+
+          // Gentle chime on phase change
+          playGentleBreathTone(soundEnabled);
+
+          return activePattern.phases[nextIdx].duration;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isBreathingActive, currentPhaseIdx, activePattern, soundEnabled]);
+
+  // Rest mode timer loop
+  useEffect(() => {
+    if (!restModeActive) return;
+
+    const timer = setInterval(() => {
+      setRestSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setRestModeActive(false);
+          return 120;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [restModeActive]);
+
+  const handleToggleBreathing = () => {
+    playMechanicalClick(soundEnabled);
+    if (!isBreathingActive) {
+      playGentleBreathTone(soundEnabled);
+      setIsBreathingActive(true);
+    } else {
+      setIsBreathingActive(false);
     }
-    if (idx < SENSORY_GROUNDING_STEPS.length - 1) {
-      setCurrentStepIdx(idx + 1);
-    }
   };
 
-  const resetGrounding = () => {
+  const handleSelectPattern = (pattern: BreathingPattern) => {
     playMechanicalClick(soundEnabled);
-    setGroundingCompleted([]);
-    setCurrentStepIdx(0);
+    setSelectedPattern(pattern);
+    setCurrentPhaseIdx(0);
+    setSecondsRemainingInPhase(PATTERNS[pattern].phases[0].duration);
   };
 
-  // Pop bubble fidget
-  const popBubble = (index: number) => {
-    playChiptuneBeep(800 + index * 40, soundEnabled);
-    setBubbles((prev) => {
-      const next = [...prev];
-      next[index] = !next[index];
-      return next;
-    });
-  };
-
-  // Rocker switch
-  const toggleRocker = () => {
+  const handleResetBreath = () => {
     playMechanicalClick(soundEnabled);
-    setRockerOn((prev) => !prev);
+    setIsBreathingActive(false);
+    setCurrentPhaseIdx(0);
+    setSecondsRemainingInPhase(activePattern.phases[0].duration);
   };
 
-  // Dial clicker
-  const clickDial = () => {
+  const toggleRelease = (id: string) => {
     playMechanicalClick(soundEnabled);
-    setDialCount((prev) => (prev + 1) % 100);
+    setCompletedReleases((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
-  // Water garden
-  const waterGarden = () => {
-    playChiptuneBeep(987.77, soundEnabled);
-    setWaterDrops((prev) => prev + 1);
-    setGardenBlooms((prev) => Math.min(8, prev + 1));
-  };
+  // Breathing Visual Scale Calculation
+  const isExpanding = activePhase.name === 'Inhale';
+  const isContracting = activePhase.name === 'Exhale';
+  const isHolding = activePhase.name === 'Hold';
 
-  const step = SENSORY_GROUNDING_STEPS[currentStepIdx];
+  const scaleClass = isExpanding
+    ? 'scale-110 sm:scale-125 duration-1000'
+    : isContracting
+    ? 'scale-90 duration-1000'
+    : isHolding
+    ? 'scale-105 duration-500'
+    : 'scale-95 duration-500';
+
+  const phaseColor = isExpanding
+    ? 'bg-[#7FB685] text-[#2D3142]'
+    : isContracting
+    ? 'bg-[#CADBFB] text-[#2D3142]'
+    : 'bg-[#F4A261] text-[#2D3142]';
 
   return (
     <div className="w-full space-y-4">
-      {/* 5-4-3-2-1 Sensory Grounding Module */}
+      {/* 2-Minute Screen Rest Overlay */}
+      {restModeActive && (
+        <div className="fixed inset-0 z-50 bg-[#1e212b]/95 text-[#FAF8F5] flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-sm animate-fade-in">
+          <div className="max-w-md w-full bg-[#2D3142] border-2 border-[#7FB685] p-6 sm:p-8 pixel-shadow-lg">
+            <div className="flex items-center justify-center gap-2 mb-3 text-[#7FB685]">
+              <Moon className="w-6 h-6 animate-pulse" />
+              <span className="font-mono text-xs font-bold uppercase tracking-widest">
+                QUIET REST MODE
+              </span>
+            </div>
+
+            <div className="font-mono text-4xl sm:text-5xl font-bold text-[#FAF8F5] my-4">
+              {Math.floor(restSecondsLeft / 60)}:
+              {String(restSecondsLeft % 60).padStart(2, '0')}
+            </div>
+
+            <p className="font-sans text-sm sm:text-base text-[#FAF8F5]/90 mb-6 leading-relaxed">
+              Close your eyes or gaze gently at something far away. Let your shoulders drop. There is nothing to fix or accomplish right now.
+            </p>
+
+            <button
+              id="exit-rest-mode-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                setRestModeActive(false);
+                setRestSecondsLeft(120);
+              }}
+              className="pixel-btn px-6 py-2.5 bg-[#FAF8F5] hover:bg-[#F2EFE9] text-[#2D3142] border-2 border-[#FAF8F5] font-mono text-xs font-bold uppercase pixel-shadow-sm"
+            >
+              Resume Workspace
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Calm Header & Pattern Selector */}
       <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 sm:p-6 pixel-shadow">
-        <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-3 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142]">
-              5-4-3-2-1 TECHNIQUE
-            </span>
-            <span className="font-mono text-xs font-bold text-[#2D3142]">
-              NEURODIVERGENT GROUNDING
-            </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-[#2D3142] pb-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142]">
+                CALM PACER
+              </span>
+              <span className="font-mono text-xs font-bold text-[#2D3142]">
+                PARASYMPATHETIC REGULATION
+              </span>
+            </div>
+            <p className="font-sans text-xs text-[#2D3142]/70 mt-1">
+              Gentle breathing guides your heart rate and clears mental fog without pressure or game scores.
+            </p>
           </div>
 
-          <button
-            id="reset-grounding-btn"
-            onClick={resetGrounding}
-            className="pixel-btn flex items-center gap-1 px-2.5 py-1 bg-[#F2EFE9] border border-[#2D3142] font-mono text-[11px] font-bold text-[#2D3142]"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>RESET DECK</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              id="start-rest-mode-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                setRestModeActive(true);
+                setRestSecondsLeft(120);
+              }}
+              title="Dim screen and take a quiet 2-minute visual break"
+              className="pixel-btn flex items-center gap-1.5 px-3 py-1.5 bg-[#F2EFE9] hover:bg-[#CADBFB] border border-[#2D3142] font-mono text-xs font-bold text-[#2D3142]"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              <span>2-MIN REST</span>
+            </button>
+
+            <button
+              id="reset-breath-btn"
+              onClick={handleResetBreath}
+              title="Reset breath pace"
+              className="pixel-btn p-1.5 bg-[#F2EFE9] hover:bg-[#FAF8F5] border border-[#2D3142] text-[#2D3142]"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Step Navigation Cards */}
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-4">
-          {SENSORY_GROUNDING_STEPS.map((s, idx) => {
-            const isDone = groundingCompleted.includes(idx);
-            const isCurrent = currentStepIdx === idx;
+        {/* Pattern Selection Tabs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+          {(['box', '478', 'gentle'] as BreathingPattern[]).map((patternKey) => {
+            const pattern = PATTERNS[patternKey];
+            const isSelected = selectedPattern === patternKey;
             return (
               <button
-                key={idx}
-                id={`grounding-step-tab-${idx}`}
-                onClick={() => {
-                  playMechanicalClick(soundEnabled);
-                  setCurrentStepIdx(idx);
-                }}
-                className={`pixel-btn p-2 border-2 border-[#2D3142] text-center transition-all ${
-                  isCurrent
-                    ? 'bg-[#CADBFB] pixel-shadow font-bold'
-                    : isDone
-                    ? 'bg-[#7FB685] text-[#2D3142]'
-                    : 'bg-[#F2EFE9] text-[#2D3142]/60'
+                key={patternKey}
+                id={`pattern-tab-${patternKey}`}
+                onClick={() => handleSelectPattern(patternKey)}
+                className={`pixel-btn p-3 border-2 border-[#2D3142] text-left transition-all ${
+                  isSelected
+                    ? 'bg-[#7FB685] text-[#2D3142] pixel-shadow font-bold'
+                    : 'bg-[#F2EFE9] hover:bg-[#FAF8F5] text-[#2D3142]/80'
                 }`}
               >
-                <div className="font-mono text-sm sm:text-base font-bold">
-                  {s.count}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono text-xs font-bold uppercase">
+                    {pattern.name}
+                  </span>
+                  <span className="font-mono text-[10px]">
+                    {isSelected ? '●' : '○'}
+                  </span>
                 </div>
-                <div className="font-mono text-[9px] uppercase tracking-tight truncate">
-                  {s.sense.split(' ')[0]}
+                <div className="font-sans text-[11px] text-[#2D3142]/80 leading-snug">
+                  {pattern.tagline}
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Active Grounding Prompt Card */}
-        <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-4 pixel-shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-mono text-lg font-bold px-2 py-0.5 bg-[#FAF8F5] border border-[#2D3142] text-[#2D3142]">
-              {step.count}
-            </span>
-            <span className="font-mono text-sm font-bold text-[#2D3142] uppercase">
-              {step.sense}
+        {/* Interactive Breathing Canvas */}
+        <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-6 sm:p-8 pixel-inset-soft flex flex-col items-center justify-center text-center relative overflow-hidden">
+          {/* Subtle background rhythm indicator */}
+          <div className="mb-4">
+            <span className={`font-mono text-xs font-bold px-3 py-1 border border-[#2D3142] uppercase tracking-wider ${phaseColor}`}>
+              {isBreathingActive ? activePhase.name : 'READY'}
             </span>
           </div>
 
-          <h3 className="font-sans text-base sm:text-lg font-semibold text-[#2D3142] mb-3 leading-snug">
-            {step.prompt}
-          </h3>
+          {/* Visual Breathing Ring */}
+          <div className="relative w-44 h-44 sm:w-56 sm:h-56 flex items-center justify-center my-3">
+            {/* Outer subtle guide ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#2D3142]/20" />
 
-          <div className="bg-[#FAF8F5] border border-[#2D3142] p-3 mb-4 pixel-inset-soft">
-            <div className="font-mono text-[10px] text-[#2D3142]/70 uppercase mb-1">
-              INSPIRATION & EXAMPLES:
-            </div>
-            <ul className="space-y-1">
-              {step.examples.map((ex, i) => (
-                <li key={i} className="font-sans text-xs sm:text-sm text-[#2D3142] flex items-center gap-2">
-                  <span className="text-[#7FB685] font-bold">◆</span>
-                  <span>{ex}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="font-sans text-xs text-[#2D3142]/70">
-              Notice with curiosity, without judgment.
-            </span>
-
-            <button
-              id={`step-done-btn-${currentStepIdx}`}
-              onClick={() => handleCompleteStep(currentStepIdx)}
-              className="pixel-btn px-4 py-2 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm"
+            {/* Dynamic Expanding/Contracting Breathing Orb */}
+            <div
+              className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full border-3 border-[#2D3142] flex flex-col items-center justify-center transition-transform ease-in-out ${scaleClass} ${
+                isBreathingActive
+                  ? isExpanding
+                    ? 'bg-[#7FB685]/80 shadow-[0_0_20px_rgba(127,182,133,0.4)]'
+                    : isContracting
+                    ? 'bg-[#CADBFB]/80 shadow-[0_0_15px_rgba(202,219,251,0.4)]'
+                    : 'bg-[#F4A261]/80'
+                  : 'bg-[#FAF8F5]'
+              }`}
             >
-              {groundingCompleted.includes(currentStepIdx) ? '✓ COMPLETED' : 'I OBSERVED THIS →'}
+              {isBreathingActive ? (
+                <>
+                  <span className="font-mono text-3xl sm:text-4xl font-bold text-[#2D3142]">
+                    {secondsRemainingInPhase}s
+                  </span>
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-[#2D3142]/80 mt-1">
+                    {activePhase.name}
+                  </span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <Wind className="w-8 h-8 text-[#2D3142] mb-1 opacity-70" />
+                  <span className="font-mono text-xs font-bold text-[#2D3142]">
+                    TAP START
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Calming Prompt Text */}
+          <p className="font-sans text-sm sm:text-base font-medium text-[#2D3142] mt-3 max-w-md h-8 flex items-center justify-center">
+            {isBreathingActive ? activePhase.prompt : 'Take a comfortable posture, relax your jaw, and begin.'}
+          </p>
+
+          {/* Controls */}
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              id="toggle-breath-pacer-btn"
+              onClick={handleToggleBreathing}
+              className={`pixel-btn px-6 py-2.5 border-2 border-[#2D3142] font-mono text-xs sm:text-sm font-bold flex items-center gap-2 pixel-shadow ${
+                isBreathingActive
+                  ? 'bg-[#F4A261] text-[#2D3142]'
+                  : 'bg-[#7FB685] hover:bg-[#A3CFAB] text-[#2D3142]'
+              }`}
+            >
+              {isBreathingActive ? (
+                <>
+                  <Pause className="w-4 h-4" />
+                  <span>PAUSE BREATHING</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>START BREATH PACER</span>
+                </>
+              )}
             </button>
           </div>
+
+          {completedCycles > 0 && (
+            <div className="mt-3 font-mono text-[11px] text-[#2D3142]/70 flex items-center gap-1.5">
+              <span>◆</span>
+              <span>{completedCycles} calm cycle{completedCycles === 1 ? '' : 's'} completed</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Two Column Row: Tactile Fidget Matrix & Pixel Terrarium */}
+      {/* Two-Column Utility: Somatic De-escalation & Peaceful Audio Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Tactile Fidget Matrix (ADHD tactile focus stimming) */}
-        <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-4 pixel-shadow">
+        {/* Card 1: Physical Reset Micro-Actions */}
+        <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 sm:p-5 pixel-shadow">
           <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-3">
-            <span className="font-mono text-xs font-bold uppercase text-[#2D3142]">
-              TACTILE FIDGET MATRIX
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-bold text-[#2D3142] uppercase">
+                PHYSICAL RESET CHECKLIST
+              </span>
+            </div>
             <span className="font-mono text-[10px] text-[#2D3142]/70">
-              MECHANICAL STIM PAD
+              SOMATIC COMFORT
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {/* Control 1: Bubble Wrap Popper */}
-            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5">
-              <div className="font-mono text-[10px] font-bold text-[#2D3142] mb-1.5 uppercase">
-                BUBBLE POP
-              </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                {bubbles.map((popped, idx) => (
-                  <button
-                    key={idx}
-                    id={`bubble-pop-${idx}`}
-                    onClick={() => popBubble(idx)}
-                    className={`pixel-btn h-7 border-2 border-[#2D3142] transition-colors ${
-                      popped ? 'bg-[#7FB685] pixel-inset' : 'bg-[#CADBFB] pixel-shadow-sm'
+          <p className="font-sans text-xs text-[#2D3142]/75 mb-3 leading-relaxed">
+            ADHD & overstimulation physically brace muscles. Tap each micro-action as you try it:
+          </p>
+
+          <div className="space-y-2">
+            {PHYSICAL_RELEASES.map((item) => {
+              const isChecked = completedReleases.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  id={`physical-release-${item.id}`}
+                  onClick={() => toggleRelease(item.id)}
+                  className={`pixel-btn w-full text-left p-2.5 border-2 border-[#2D3142] flex items-start gap-2.5 transition-all ${
+                    isChecked
+                      ? 'bg-[#EBF3EC] text-[#2D3142]'
+                      : 'bg-[#F2EFE9] hover:bg-[#FAF8F5] text-[#2D3142]'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-none border border-[#2D3142] flex items-center justify-center shrink-0 mt-0.5 ${
+                      isChecked ? 'bg-[#7FB685] text-[#2D3142]' : 'bg-[#FAF8F5]'
                     }`}
-                  />
-                ))}
-              </div>
-            </div>
+                  >
+                    {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </div>
 
-            {/* Control 2: Heavy Rocker Switch */}
-            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 flex flex-col justify-between">
-              <div className="font-mono text-[10px] font-bold text-[#2D3142] uppercase">
-                TOGGLE SWITCH
-              </div>
-              <button
-                id="rocker-switch-btn"
-                onClick={toggleRocker}
-                className={`pixel-btn w-full py-2.5 border-2 border-[#2D3142] font-mono text-xs font-bold transition-all ${
-                  rockerOn
-                    ? 'bg-[#F4A261] text-[#2D3142] pixel-shadow-sm'
-                    : 'bg-[#E4DFD5] text-[#2D3142]/60'
-                }`}
-              >
-                {rockerOn ? '[ON]' : '[OFF]'}
-              </button>
-            </div>
-
-            {/* Control 3: Dial Counter */}
-            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 flex flex-col justify-between">
-              <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#2D3142] uppercase">
-                <span>CLICK DIAL</span>
-                <span className="px-1 bg-[#F8C390] border border-[#2D3142]">{dialCount}</span>
-              </div>
-              <button
-                id="dial-counter-btn"
-                onClick={clickDial}
-                className="pixel-btn w-full py-2 bg-[#CADBFB] hover:bg-[#B4C5E4] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm"
-              >
-                + CLICK STEP
-              </button>
-            </div>
-
-            {/* Control 4: Reset all Fidgets */}
-            <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-2.5 flex flex-col justify-between">
-              <div className="font-mono text-[10px] font-bold text-[#2D3142] uppercase">
-                RESET ALL
-              </div>
-              <button
-                id="reset-fidgets-btn"
-                onClick={() => {
-                  playMechanicalClick(soundEnabled);
-                  setBubbles([false, false, false, false, false, false, false, false]);
-                  setRockerOn(false);
-                  setDialCount(0);
-                }}
-                className="pixel-btn w-full py-2 bg-[#F2EFE9] hover:bg-[#E4DFD5] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm"
-              >
-                FLIP TO DEFAULT
-              </button>
-            </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5 font-sans text-xs font-semibold text-[#2D3142]">
+                      <span>{item.icon}</span>
+                      <span className={isChecked ? 'line-through opacity-75' : ''}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="font-sans text-[11px] text-[#2D3142]/70 mt-0.5">
+                      {item.tip}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Pixel Terrarium / Pocket Garden */}
-        <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 pixel-shadow flex flex-col justify-between">
+        {/* Card 2: Soothing Soundscape & Calming Atmosphere */}
+        <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 sm:p-5 pixel-shadow flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-3">
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-xs font-bold text-[#2D3142] uppercase">
-                  POCKET TERRARIUM
-                </span>
-                <span className="font-mono text-[10px] px-1 bg-[#7FB685] border border-[#2D3142]">
-                  BLOOMS: {gardenBlooms}/8
-                </span>
-              </div>
+              <span className="font-mono text-xs font-bold text-[#2D3142] uppercase">
+                CALMING SOUNDSCAPES
+              </span>
               <span className="font-mono text-[10px] text-[#2D3142]/70">
-                WATER: {waterDrops}
+                AUDITORY MASKING
               </span>
             </div>
 
-            {/* Pixel Flora Canvas Stage */}
-            <div className="bg-[#F2EFE9] border-2 border-[#2D3142] p-4 min-h-[120px] flex items-end justify-center gap-3 pixel-inset">
-              {/* Plant 1: Moss Sprout */}
-              <div className="flex flex-col items-center">
-                <div className="font-mono text-[18px] select-none">
-                  {gardenBlooms >= 1 ? '🌱' : '🪨'}
+            <p className="font-sans text-xs text-[#2D3142]/75 mb-4 leading-relaxed">
+              Quiet constant sound reduces sensitivity to abrupt background noises and helps calm racing thoughts.
+            </p>
+
+            <div className="space-y-3">
+              {/* Brown Noise / Rain Toggle */}
+              <div className="p-3 bg-[#F2EFE9] border-2 border-[#2D3142] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-[#CADBFB] border border-[#2D3142] flex items-center justify-center">
+                    <CloudRain className="w-4 h-4 text-[#2D3142]" />
+                  </div>
+                  <div>
+                    <div className="font-mono text-xs font-bold text-[#2D3142]">
+                      BROWN NOISE / RAIN HUM
+                    </div>
+                    <div className="font-sans text-[11px] text-[#2D3142]/70">
+                      Gentle low-frequency sound blanket
+                    </div>
+                  </div>
                 </div>
-                <div className="w-8 h-3 bg-[#8E4E14] border border-[#2D3142] mt-1" />
+
+                <button
+                  id="calm-toggle-rain-btn"
+                  onClick={() => {
+                    playMechanicalClick(soundEnabled);
+                    if (onToggleAmbient) onToggleAmbient();
+                  }}
+                  className={`pixel-btn px-3 py-1.5 border-2 border-[#2D3142] font-mono text-xs font-bold ${
+                    ambientNoise
+                      ? 'bg-[#7FB685] text-[#2D3142] pixel-shadow-sm'
+                      : 'bg-[#FAF8F5] text-[#2D3142]/70'
+                  }`}
+                >
+                  {ambientNoise ? 'PLAYING' : 'START'}
+                </button>
               </div>
 
-              {/* Plant 2: Matcha Fern */}
-              <div className="flex flex-col items-center">
-                <div className="font-mono text-[22px] select-none">
-                  {gardenBlooms >= 3 ? '🌿' : '🌱'}
+              {/* Retro Lo-Fi Toggle */}
+              <div className="p-3 bg-[#F2EFE9] border-2 border-[#2D3142] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-[#F4A261] border border-[#2D3142] flex items-center justify-center">
+                    <Music className="w-4 h-4 text-[#2D3142]" />
+                  </div>
+                  <div>
+                    <div className="font-mono text-xs font-bold text-[#2D3142]">
+                      COZY 8-BIT LO-FI
+                    </div>
+                    <div className="font-sans text-[11px] text-[#2D3142]/70">
+                      Soft acoustic jazz harmonic chords
+                    </div>
+                  </div>
                 </div>
-                <div className="w-10 h-4 bg-[#F4A261] border border-[#2D3142] mt-1" />
-              </div>
 
-              {/* Plant 3: Star Lily */}
-              <div className="flex flex-col items-center">
-                <div className="font-mono text-[24px] select-none">
-                  {gardenBlooms >= 5 ? '🌸' : gardenBlooms >= 3 ? '🌱' : '🪨'}
-                </div>
-                <div className="w-10 h-4 bg-[#CADBFB] border border-[#2D3142] mt-1" />
-              </div>
-
-              {/* Plant 4: Pine Bonsai */}
-              <div className="flex flex-col items-center">
-                <div className="font-mono text-[26px] select-none">
-                  {gardenBlooms >= 7 ? '🪴' : '🌿'}
-                </div>
-                <div className="w-12 h-5 bg-[#35693F] border border-[#2D3142] mt-1" />
+                <button
+                  id="calm-toggle-lofi-btn"
+                  onClick={() => {
+                    playMechanicalClick(soundEnabled);
+                    if (onToggleRetroLofi) onToggleRetroLofi(!isRetroLofiActive);
+                  }}
+                  className={`pixel-btn px-3 py-1.5 border-2 border-[#2D3142] font-mono text-xs font-bold ${
+                    isRetroLofiActive
+                      ? 'bg-[#7FB685] text-[#2D3142] pixel-shadow-sm'
+                      : 'bg-[#FAF8F5] text-[#2D3142]/70'
+                  }`}
+                >
+                  {isRetroLofiActive ? 'PLAYING' : 'START'}
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-4 pt-3 border-t border-[#2D3142]/20 flex items-center justify-between">
+            <span className="font-sans text-[11px] text-[#2D3142]/70">
+              Looking for Spotify / Apple Music?
+            </span>
             <button
-              id="water-garden-btn"
-              onClick={waterGarden}
-              className="pixel-btn flex-1 flex items-center justify-center gap-2 py-2 bg-[#CADBFB] hover:bg-[#B4C5E4] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm"
+              id="calm-open-music-tab-btn"
+              onClick={() => {
+                playMechanicalClick(soundEnabled);
+                if (onNavigateToMusic) onNavigateToMusic();
+              }}
+              className="font-mono text-xs font-bold text-[#2D3142] underline hover:text-[#35693F]"
             >
-              <Droplets className="w-4 h-4 text-[#2D3142]" />
-              <span>GIVE WATER (+1 BLOOM)</span>
+              Open Music Tab →
             </button>
           </div>
         </div>

@@ -48,13 +48,35 @@ export interface DayActivity {
   level: 0 | 1 | 2 | 3;
 }
 
+export type PetSpecies = 'sprout' | 'ember' | 'bubbles' | 'pip' | 'mochi';
+
+export interface PetEvolutionStage {
+  stage: number;
+  title: string;
+  name: string;
+  desc: string;
+  unlockLevel: number;
+}
+
 export interface PetState {
+  id: PetSpecies;
   name: string;
   level: number;
   exp: number;
   maxExp: number;
-  mood: 'happy' | 'focusing' | 'sleeping' | 'celebrating';
+  mood: 'happy' | 'focusing' | 'sleeping' | 'celebrating' | 'hungry';
+  berriesAvailable: number;
   berriesFed: number;
+  totalWorkExpEarned?: number;
+}
+
+export type FontFamilyOption = 'default' | 'mono' | 'lexend' | 'arcade' | 'dyslexic';
+export type FontSizeOption = 'compact' | 'standard' | 'large' | 'extralarge';
+
+export interface FontSettings {
+  family: FontFamilyOption;
+  size: FontSizeOption;
+  increasedSpacing: boolean;
 }
 
 export interface MusicStation {

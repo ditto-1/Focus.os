@@ -186,13 +186,13 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 my-1">
-            <div>
-              <h3 className="font-mono text-base font-bold text-[#2D3142]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 my-1">
+            <div className="min-w-0">
+              <h3 className="font-mono text-sm sm:text-base font-bold text-[#2D3142] leading-snug break-words">
                 {activeTask.title}
               </h3>
               {activeTask.notes && (
-                <p className="font-sans text-xs text-[#2D3142]/80 mt-0.5">
+                <p className="font-sans text-xs text-[#2D3142]/80 mt-1 leading-relaxed break-words">
                   {activeTask.notes}
                 </p>
               )}
@@ -204,7 +204,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                 playQuestComplete(soundEnabled);
                 onCompleteTask(activeTask.id);
               }}
-              className="pixel-btn px-3 py-1.5 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm whitespace-nowrap self-start sm:self-center"
+              className="pixel-btn px-3 py-1.5 bg-[#7FB685] hover:bg-[#A3CFAB] border-2 border-[#2D3142] font-mono text-xs font-bold text-[#2D3142] pixel-shadow-sm whitespace-nowrap self-stretch sm:self-center text-center rounded-xs"
             >
               ✓ MARK COMPLETE
             </button>
@@ -225,14 +225,14 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                       else playMechanicalClick(soundEnabled);
                       onToggleSubtask(activeTask.id, sub.id);
                     }}
-                    className={`cursor-pointer flex items-center gap-2 p-1.5 border border-[#2D3142] text-xs font-sans ${
+                    className={`cursor-pointer flex items-start gap-2 p-2 border border-[#2D3142] text-xs font-sans rounded-xs ${
                       sub.completed ? 'bg-[#E4DFD5]/50 line-through text-[#2D3142]/60' : 'bg-[#FAF8F5]'
                     }`}
                   >
-                    <span className="font-mono text-[10px] font-bold text-[#7FB685]">
+                    <span className="font-mono text-[10px] font-bold text-[#7FB685] shrink-0 mt-0.5">
                       {sub.completed ? '☑' : '☐'}
                     </span>
-                    <span className="truncate">{sub.title}</span>
+                    <span className="leading-snug break-words flex-1 min-w-0">{sub.title}</span>
                   </div>
                 ))}
               </div>
@@ -242,7 +242,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
       )}
 
       {/* Mode Selector Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 select-none">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 select-none">
         {(Object.keys(MODE_PRESETS) as FocusMode[]).map((mode) => {
           const preset = MODE_PRESETS[mode];
           const isSelected = currentMode === mode;
@@ -251,18 +251,18 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
               key={mode}
               id={`focus-mode-${mode}`}
               onClick={() => handleSelectMode(mode)}
-              className={`pixel-btn flex items-center justify-between p-2.5 border-2 border-[#2D3142] text-left transition-all ${
+              className={`pixel-btn flex items-center justify-between p-2 sm:p-2.5 border-2 border-[#2D3142] text-left transition-all rounded-xs ${
                 isSelected
                   ? 'bg-[#CADBFB] text-[#2D3142] pixel-shadow font-bold'
                   : 'bg-[#F2EFE9] text-[#2D3142]/70 hover:bg-[#FAF8F5] pixel-shadow-sm'
               }`}
             >
               <div>
-                <div className="font-mono text-xs uppercase flex items-center gap-1">
+                <div className="font-mono text-[11px] sm:text-xs uppercase flex items-center gap-1">
                   <span>{isSelected ? '◆' : '◇'}</span>
                   <span>{preset.label}</span>
                 </div>
-                <div className="font-mono text-[11px] text-[#2D3142]/80 mt-0.5">
+                <div className="font-mono text-[10px] sm:text-[11px] text-[#2D3142]/80 mt-0.5">
                   {preset.minutes} MINS
                 </div>
               </div>
@@ -273,11 +273,11 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
       </div>
 
       {/* Main Chunky Hardware LCD Display Unit */}
-      <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-5 sm:p-8 pixel-shadow-lg relative overflow-hidden">
+      <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 sm:p-8 pixel-shadow-lg relative overflow-hidden">
         <div className="absolute inset-0 lcd-subtle pointer-events-none" />
 
         {/* LCD Header */}
-        <div className="flex items-center justify-between border-b-2 border-[#2D3142]/20 pb-3 mb-6">
+        <div className="flex items-center justify-between border-b-2 border-[#2D3142]/20 pb-2 sm:pb-3 mb-3 sm:mb-6">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#7FB685] border border-[#2D3142] text-[#2D3142]">
               {MODE_PRESETS[currentMode].label}
@@ -294,23 +294,23 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
         </div>
 
         {/* Center LCD Big Numbers */}
-        <div className="flex flex-col items-center justify-center my-4 select-none">
-          <div className="font-mono text-6xl sm:text-7xl md:text-8xl font-bold tracking-tight text-[#2D3142] filter drop-shadow-[3px_3px_0px_#CADBFB]">
+        <div className="flex flex-col items-center justify-center my-2 sm:my-4 select-none">
+          <div className="font-mono text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight text-[#2D3142] filter drop-shadow-[3px_3px_0px_#CADBFB]">
             {timeFormatted}
           </div>
 
           {/* Box Breathing Visualizer if in Breathing Mode */}
           {currentMode === 'breathe' && isTimerRunning && (
-            <div className="mt-4 flex flex-col items-center p-3 bg-[#F2EFE9] border-2 border-[#2D3142] pixel-shadow-sm w-full max-w-xs">
+            <div className="mt-3 flex flex-col items-center p-2.5 bg-[#F2EFE9] border-2 border-[#2D3142] pixel-shadow-sm w-full max-w-xs">
               <div className="font-mono text-xs font-bold text-[#2D3142] uppercase tracking-wider mb-1">
                 {breathPhase} ({breathSeconds}s)
               </div>
-              <div className="w-16 h-16 border-2 border-[#2D3142] bg-[#CADBFB] flex items-center justify-center transition-all duration-700 ease-in-out">
+              <div className="w-14 h-14 border-2 border-[#2D3142] bg-[#CADBFB] flex items-center justify-center transition-all duration-700 ease-in-out">
                 <span className="font-mono text-lg font-bold text-[#2D3142]">
                   {breathPhase === 'Inhale' ? '▲' : breathPhase === 'Exhale' ? '▼' : '◆'}
                 </span>
               </div>
-              <p className="font-sans text-[11px] text-[#2D3142]/70 text-center mt-2">
+              <p className="font-sans text-[10px] sm:text-[11px] text-[#2D3142]/70 text-center mt-1.5">
                 Follow the 4-second rhythm. Inhale calm, release tension.
               </p>
             </div>
@@ -318,13 +318,13 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
         </div>
 
         {/* Segmented Pixel Stamina / Progress Meter */}
-        <div className="mt-6 space-y-1.5">
-          <div className="flex items-center justify-between font-mono text-[11px]">
-            <span className="font-bold text-[#2D3142]">STAMINA DRAIN / FOCUS CHARGE</span>
+        <div className="mt-3 sm:mt-6 space-y-1">
+          <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px]">
+            <span className="font-bold text-[#2D3142]">FOCUS PROGRESS</span>
             <span className="font-bold text-[#2D3142]">{Math.round(progressRatio * 100)}%</span>
           </div>
 
-          <div className="w-full bg-[#E4DFD5] border-2 border-[#2D3142] p-1 h-6 flex gap-1 pixel-inset">
+          <div className="w-full bg-[#E4DFD5] border-2 border-[#2D3142] p-0.5 sm:p-1 h-5 sm:h-6 flex gap-1 pixel-inset">
             {Array.from({ length: totalBlocks }).map((_, idx) => (
               <div
                 key={idx}
@@ -339,7 +339,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
         </div>
 
         {/* Mechanical Controls Bar */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 select-none">
+        <div className="mt-4 sm:mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 select-none">
           {/* Main Play / Pause Button */}
           <button
             id="timer-toggle-btn"

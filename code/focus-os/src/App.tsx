@@ -10,7 +10,8 @@ import { MusicController } from './components/MusicController';
 import { SensoryScreen } from './components/SensoryScreen';
 import { CartridgeMemoryScreen } from './components/CartridgeMemoryScreen';
 import { AuthScreen } from './components/AuthScreen';
-import { ScreenTab, TaskItem, RoutineItem, DayActivity, PetState, Subtask, AuthUser } from './types';
+import { SettingsModal } from './components/SettingsModal';
+import { ScreenTab, TaskItem, RoutineItem, DayActivity, PetState, Subtask, AuthUser, FontSettings } from './types';
 import {
   INITIAL_TASKS,
   INITIAL_ROUTINES,
@@ -26,10 +27,22 @@ import {
   playMechanicalClick,
   playQuestComplete,
 } from './utils/audio';
+import { loadFontSettings, saveFontSettings, applyFontSettingsToDOM } from './utils/fontSettings';
+import { getCurrentPetStage } from './data/petEvolutions';
 
 export default function App() {
   // Active Screen Tab
   const [currentTab, setCurrentTab] = useState<ScreenTab>('whatnow');
+
+  // Font settings
+  const [fontSettings, setFontSettings] = useState<FontSettings>(() => loadFontSettings());
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [evolutionToast, setEvolutionToast] = useState<{
+    title: string;
+    petName: string;
+    species: string;
+    level: number;
+  } | null>(null);
 
   // Authenticated User & Portal state - Defaults to null to present standalone Login/Signup screen
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -44,7 +57,6 @@ export default function App() {
     const saved = localStorage.getItem('cozy_pixel_sound');
     return saved !== null ? JSON.parse(saved) : true;
   });
-
 
   const [ambientNoise, setAmbientNoise] = useState<boolean>(false);
   const [isRetroLofiActive, setIsRetroLofiActive] = useState<boolean>(false);
@@ -79,19 +91,38 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_WEEK_ACTIVITY;
   });
 
-  // Pet state
+  // Pet state with migration for species, evolutions, and work-to-feed inventory
   const [pet, setPet] = useState<PetState>(() => {
     const saved = localStorage.getItem('cozy_pixel_pet_v2');
-    return saved
-      ? JSON.parse(saved)
-      : {
-          name: 'Sprout',
-          level: 4,
-          exp: 65,
-          maxExp: 100,
-          mood: 'happy',
-          berriesFed: 15,
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        return {
+          id: p.id || 'sprout',
+          name: p.name || 'Sprout',
+          level: typeof p.level === 'number' ? p.level : 2,
+          exp: typeof p.exp === 'number' ? p.exp : 30,
+          maxExp: p.maxExp || 100,
+          mood: p.mood || 'happy',
+          berriesAvailable: typeof p.berriesAvailable === 'number' ? p.berriesAvailable : Math.max(1, p.berriesFed || 2),
+          berriesFed: p.berriesFed || 0,
+          totalWorkExpEarned: p.totalWorkExpEarned || 0,
         };
+      } catch {
+        // Fallback below
+      }
+    }
+    return {
+      id: 'sprout',
+      name: 'Sprout',
+      level: 2,
+      exp: 40,
+      maxExp: 100,
+      mood: 'happy',
+      berriesAvailable: 2,
+      berriesFed: 3,
+      totalWorkExpEarned: 50,
+    };
   });
 
   // Scratchpad
@@ -101,6 +132,12 @@ export default function App() {
       '• Remember to take gentle breaths.\n• You do not have to finish everything right now.\n• One small micro-step creates momentum.'
     );
   });
+
+  // Apply and persist typography font settings
+  useEffect(() => {
+    applyFontSettingsToDOM(fontSettings);
+    saveFontSettings(fontSettings);
+  }, [fontSettings]);
 
   // Persistence to localStorage
   useEffect(() => {
@@ -144,27 +181,37 @@ export default function App() {
     toggleRetroLofi(active);
   };
 
-  // Complete a focus session (timer finished)
+  // Complete a focus session (timer finished) -> Rewards work XP & Harvests treats into bag!
   const handleSessionComplete = (minutes: number) => {
-    // Reward pet
+    const treatsEarned = minutes >= 20 ? 2 : 1;
+    const workXp = minutes * 2;
+
     setPet((prev) => {
-      const expGain = minutes * 2;
+      const expGain = workXp;
       const newExp = prev.exp + expGain;
-      if (newExp >= prev.maxExp) {
-        return {
-          ...prev,
-          level: prev.level + 1,
-          exp: newExp - prev.maxExp,
-          maxExp: Math.round(prev.maxExp * 1.3),
-          mood: 'celebrating',
-          berriesFed: prev.berriesFed + 2,
-        };
+      const nextLevel = newExp >= prev.maxExp ? prev.level + 1 : prev.level;
+      const evolved = nextLevel > prev.level;
+
+      if (evolved) {
+        playVictoryFanfare(soundEnabled);
+        const stage = getCurrentPetStage(prev.id, nextLevel);
+        setEvolutionToast({
+          title: stage.title,
+          petName: prev.name,
+          species: prev.id,
+          level: nextLevel,
+        });
+        setTimeout(() => setEvolutionToast(null), 4500);
       }
+
       return {
         ...prev,
-        exp: newExp,
+        level: nextLevel,
+        exp: newExp >= prev.maxExp ? newExp - prev.maxExp : newExp,
+        maxExp: evolved ? Math.round(prev.maxExp * 1.35) : prev.maxExp,
         mood: 'celebrating',
-        berriesFed: prev.berriesFed + 1,
+        berriesAvailable: prev.berriesAvailable + treatsEarned,
+        totalWorkExpEarned: (prev.totalWorkExpEarned || 0) + workXp,
       };
     });
 
@@ -191,22 +238,41 @@ export default function App() {
     setCurrentTab('focus');
   };
 
-  // Toggle task complete
+  // Toggle task complete -> Rewards work XP & Harvests 1 Treat into bag!
   const handleToggleTask = (id: string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === id) {
           const nextCompleted = !t.completed;
           if (nextCompleted) {
-            // Reward pet with EXP & Berry
+            playQuestComplete(soundEnabled);
+            const workXp = t.staminaPoints * 25;
+
             setPet((p) => {
-              const expGain = t.staminaPoints * 15;
+              const expGain = 15;
               const newExp = p.exp + expGain;
+              const nextLevel = newExp >= p.maxExp ? p.level + 1 : p.level;
+              const evolved = nextLevel > p.level;
+
+              if (evolved) {
+                playVictoryFanfare(soundEnabled);
+                const stage = getCurrentPetStage(p.id, nextLevel);
+                setEvolutionToast({
+                  title: stage.title,
+                  petName: p.name,
+                  species: p.id,
+                  level: nextLevel,
+                });
+                setTimeout(() => setEvolutionToast(null), 4500);
+              }
+
               return {
                 ...p,
                 exp: newExp >= p.maxExp ? newExp - p.maxExp : newExp,
-                level: newExp >= p.maxExp ? p.level + 1 : p.level,
-                berriesFed: p.berriesFed + 1,
+                level: nextLevel,
+                maxExp: evolved ? Math.round(p.maxExp * 1.35) : p.maxExp,
+                berriesAvailable: p.berriesAvailable + 1, // Harvest 1 treat from finished work!
+                totalWorkExpEarned: (p.totalWorkExpEarned || 0) + workXp,
               };
             });
 
@@ -239,7 +305,11 @@ export default function App() {
             if (st.id === subtaskId) {
               const nextDone = !st.completed;
               if (nextDone) {
-                setPet((p) => ({ ...p, exp: p.exp + 5 }));
+                setPet((p) => ({
+                  ...p,
+                  exp: p.exp + 5,
+                  totalWorkExpEarned: (p.totalWorkExpEarned || 0) + 10,
+                }));
               }
               return { ...st, completed: nextDone };
             }
@@ -335,17 +405,19 @@ export default function App() {
     }
   };
 
-  // Toggle routine
+  // Toggle routine -> Rewards work XP & Harvests 1 Treat into bag!
   const handleToggleRoutine = (id: string) => {
     setRoutines((prev) =>
       prev.map((r) => {
         if (r.id === id) {
           const nextDone = !r.completedToday;
           if (nextDone) {
+            playQuestComplete(soundEnabled);
             setPet((p) => ({
               ...p,
               exp: p.exp + r.staminaReward * 10,
-              berriesFed: p.berriesFed + 1,
+              berriesAvailable: p.berriesAvailable + 1, // Routine rewards 1 treat in bag!
+              totalWorkExpEarned: (p.totalWorkExpEarned || 0) + r.staminaReward * 20,
             }));
           }
           return {
@@ -373,24 +445,36 @@ export default function App() {
     setRoutines((prev) => [...prev, newR]);
   };
 
-  // Feed berry to pet
+  // Feed treat to pet - ONLY works when user has earned treats from work!
   const handleFeedBerry = () => {
     setPet((prev) => {
-      const newExp = prev.exp + 10;
-      if (newExp >= prev.maxExp) {
-        playVictoryFanfare(soundEnabled);
-        return {
-          ...prev,
-          level: prev.level + 1,
-          exp: newExp - prev.maxExp,
-          maxExp: Math.round(prev.maxExp * 1.3),
-          berriesFed: prev.berriesFed + 1,
-        };
+      if (prev.berriesAvailable <= 0) {
+        return prev;
       }
+      const newExp = prev.exp + 30; // Feeding gives high pet growth XP
+      const nextLevel = newExp >= prev.maxExp ? prev.level + 1 : prev.level;
+      const evolved = nextLevel > prev.level;
+
+      if (evolved) {
+        playVictoryFanfare(soundEnabled);
+        const stage = getCurrentPetStage(prev.id, nextLevel);
+        setEvolutionToast({
+          title: stage.title,
+          petName: prev.name,
+          species: prev.id,
+          level: nextLevel,
+        });
+        setTimeout(() => setEvolutionToast(null), 4500);
+      }
+
       return {
         ...prev,
-        exp: newExp,
+        level: nextLevel,
+        exp: newExp >= prev.maxExp ? newExp - prev.maxExp : newExp,
+        maxExp: evolved ? Math.round(prev.maxExp * 1.35) : prev.maxExp,
+        berriesAvailable: prev.berriesAvailable - 1,
         berriesFed: prev.berriesFed + 1,
+        mood: 'happy',
       };
     });
   };
@@ -403,12 +487,15 @@ export default function App() {
     setActiveFocusTask(INITIAL_TASKS[0]);
     setActivityLog(INITIAL_WEEK_ACTIVITY);
     setPet({
+      id: 'sprout',
       name: 'Sprout',
       level: 1,
       exp: 0,
       maxExp: 100,
       mood: 'happy',
-      berriesFed: 3,
+      berriesAvailable: 2,
+      berriesFed: 0,
+      totalWorkExpEarned: 0,
     });
     setScratchpad('• Take gentle breaths.\n• You do not have to do everything at once.');
   };
@@ -439,12 +526,15 @@ export default function App() {
       setRoutines(NEW_USER_ROUTINES);
       setActivityLog(NEW_USER_WEEK_ACTIVITY);
       setPet({
+        id: 'sprout',
         name: 'Sprout',
         level: 0,
         exp: 0,
         maxExp: 30,
         mood: 'sleeping',
+        berriesAvailable: 1,
         berriesFed: 0,
+        totalWorkExpEarned: 0,
       });
       setScratchpad(
         `• Welcome to Cozy Pocket, ${user.name}!\n• Academic focus: ${user.studyMajor || 'Your studies'}\n• Daily Target: ${user.dailyGoalMinutes || 30} minutes\n• Level 0 Cartridge initialized. Take your first gentle 5-minute study sprint to awaken Sprout!`
@@ -473,12 +563,15 @@ export default function App() {
     setRoutines(NEW_USER_ROUTINES);
     setActivityLog(NEW_USER_WEEK_ACTIVITY);
     setPet({
+      id: 'sprout',
       name: 'Sprout',
       level: 0,
       exp: 0,
       maxExp: 30,
       mood: 'sleeping',
+      berriesAvailable: 1,
       berriesFed: 0,
+      totalWorkExpEarned: 0,
     });
     setScratchpad(
       `• Welcome Guest Explorer!\n• Level: 0 (Day 1 Cartridge)\n• Daily Target: 30 minutes\n• Complete your first focus timer to wake Sprout up!`
@@ -516,22 +609,59 @@ export default function App() {
           currentUser={currentUser}
           onOpenAuth={handleLogout}
           onLogout={handleLogout}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
 
+        {/* Floating Pet Evolution Notification Toast */}
+        {evolutionToast && (
+          <div className="fixed top-3 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 z-50 p-3.5 bg-[#FAF8F5] border-3 border-[#2D3142] rounded-xl pixel-shadow-lg animate-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#F8C390] border-2 border-[#2D3142] flex items-center justify-center text-xl shrink-0 animate-bounce">
+                ✨
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-[#35693F] uppercase tracking-wider">
+                    COMPANION EVOLUTION!
+                  </span>
+                  <span className="font-mono text-[9px] px-1 bg-[#7FB685] border border-[#2D3142] text-[#2D3142] rounded-xs font-bold">
+                    LVL {evolutionToast.level}
+                  </span>
+                </div>
+                <div className="font-mono text-xs font-bold text-[#2D3142] truncate mt-0.5">
+                  {evolutionToast.petName} grew into {evolutionToast.title}!
+                </div>
+                <div className="font-sans text-[11px] text-[#2D3142]/75">
+                  A glorious new form unlocked through your focused work!
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Console Main Body Area */}
-        <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 flex flex-col space-y-4">
-          {/* Navigation Cartridge Slot Tabs */}
+        <main className="flex-1 max-w-5xl w-full mx-auto px-2.5 sm:px-6 py-2.5 sm:py-4 pb-28 md:pb-8 flex flex-col space-y-3 sm:space-y-4">
+          {/* Navigation Tabs (Top bar on desktop, bottom docked bar on mobile) */}
           <NavigationTabs
             currentTab={currentTab}
             onSelectTab={(tab) => setCurrentTab(tab)}
             soundEnabled={soundEnabled}
             activeTasksCount={activeTasksCount}
+            isTimerRunning={isTimerRunning}
+            ambientNoise={ambientNoise}
+            onToggleAmbient={handleToggleAmbient}
+            onToggleSound={() => setSoundEnabled((prev) => !prev)}
+            currentUser={currentUser}
+            onOpenAuth={() => setCurrentUser(null)}
+            onLogout={handleLogout}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           {/* Virtual Companion Pet - Always accessible at top */}
           <PixelPet
             pet={pet}
             onFeedBerry={handleFeedBerry}
+            onOpenPetSettings={() => setIsSettingsOpen(true)}
             soundEnabled={soundEnabled}
             isFocusActive={isTimerRunning}
           />
@@ -599,9 +729,16 @@ export default function App() {
               />
             )}
 
-            {/* Screen 6: Sensory Grounding & Tactile Fidgets */}
+            {/* Screen 6: Sensory Calm, Breath Pacer & Grounding */}
             {currentTab === 'sensory' && (
-              <SensoryScreen soundEnabled={soundEnabled} />
+              <SensoryScreen
+                soundEnabled={soundEnabled}
+                ambientNoise={ambientNoise}
+                onToggleAmbient={handleToggleAmbient}
+                isRetroLofiActive={isRetroLofiActive}
+                onToggleRetroLofi={handleToggleRetroLofi}
+                onNavigateToMusic={() => setCurrentTab('music')}
+              />
             )}
 
             {/* Screen 7: Memory Cartridge, Activity Heatmap & Brain Dump */}
@@ -616,84 +753,25 @@ export default function App() {
                 currentUser={currentUser}
                 onLogout={handleLogout}
                 onSwitchAccount={handleLogout}
+                onOpenSettings={() => setIsSettingsOpen(true)}
               />
             )}
           </div>
         </main>
 
-
-        {/* Handheld Console Hardware Bottom Footer */}
-        <footer className="w-full bg-[#FAF8F5] border-t-2 border-[#2D3142] py-4 px-4 sm:px-6 mt-6 select-none">
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* D-Pad / Handheld Hardware Emulation buttons */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-[#F2EFE9] border border-[#2D3142] px-2 py-1">
-                <span className="font-mono text-[10px] text-[#2D3142]/70">D-PAD:</span>
-                <span className="font-mono text-xs text-[#2D3142] font-bold">▲ ▼ ◄ ►</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  id="hardware-b-btn"
-                  onClick={() => {
-                    playMechanicalClick(soundEnabled);
-                    const tabs: ScreenTab[] = [
-                      'focus',
-                      'whatnow',
-                      'planner',
-                      'routines',
-                      'music',
-                      'sensory',
-                      'cartridge',
-                    ];
-                    const prevIdx = (tabs.indexOf(currentTab) - 1 + tabs.length) % tabs.length;
-                    setCurrentTab(tabs[prevIdx]);
-                  }}
-                  title="Previous Screen (B Button)"
-                  className="pixel-btn w-6 h-6 rounded-none bg-[#F4A261] border border-[#2D3142] font-mono text-[10px] font-bold text-[#2D3142] flex items-center justify-center pixel-shadow-sm"
-                >
-                  B
-                </button>
-                <button
-                  id="hardware-a-btn"
-                  onClick={() => {
-                    playMechanicalClick(soundEnabled);
-                    const tabs: ScreenTab[] = [
-                      'focus',
-                      'whatnow',
-                      'planner',
-                      'routines',
-                      'music',
-                      'sensory',
-                      'cartridge',
-                    ];
-                    const nextIdx = (tabs.indexOf(currentTab) + 1) % tabs.length;
-                    setCurrentTab(tabs[nextIdx]);
-                  }}
-                  title="Next Screen (A Button)"
-                  className="pixel-btn w-6 h-6 rounded-none bg-[#7FB685] border border-[#2D3142] font-mono text-[10px] font-bold text-[#2D3142] flex items-center justify-center pixel-shadow-sm"
-                >
-                  A
-                </button>
-              </div>
-            </div>
-
-            {/* Middle Barcode / Serial */}
-            <div className="flex items-center gap-2 font-mono text-[10px] text-[#2D3142]/60">
-              <span>MODEL NO. DMG-CPP-2026</span>
-              <span>•</span>
-              <span>THAPAR UCS503 PROPOSAL ENGINE</span>
-            </div>
-
-            {/* Right Headphone Jack & Certifications */}
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#2D3142] border border-[#F2EFE9]" title="Headphone Jack" />
-              <span className="font-mono text-[10px] font-bold text-[#2D3142] px-1.5 py-0.5 bg-[#CADBFB] border border-[#2D3142]">
-                PHONES
-              </span>
-            </div>
-          </div>
-        </footer>
+        {/* Global Settings & Font Configuration Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          fontSettings={fontSettings}
+          onUpdateFontSettings={setFontSettings}
+          pet={pet}
+          onUpdatePet={(updated) => setPet((prev) => ({ ...prev, ...updated }))}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled((prev) => !prev)}
+          ambientNoise={ambientNoise}
+          onToggleAmbient={handleToggleAmbient}
+        />
       </div>
     </div>
   );
