@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HardDrive, Calendar, Zap, CheckCircle2, FileText, Trash2, Volume2, Sparkles, User, LogOut, ArrowRightLeft, Settings } from 'lucide-react';
-import { DayActivity, PetState, AuthUser } from '../types';
+import { DayActivity, PetState, AuthUser, StreakInfo } from '../types';
 import { playMechanicalClick, playChiptuneBeep } from '../utils/audio';
 
 interface CartridgeMemoryScreenProps {
@@ -14,6 +14,7 @@ interface CartridgeMemoryScreenProps {
   onLogout: () => void;
   onSwitchAccount: () => void;
   onOpenSettings?: () => void;
+  streakInfo?: StreakInfo;
 }
 
 export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
@@ -27,6 +28,7 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
   onLogout,
   onSwitchAccount,
   onOpenSettings,
+  streakInfo,
 }) => {
   const [saveStatus, setSaveStatus] = useState<'IDLE' | 'SAVING' | 'SAVED'>('IDLE');
 
@@ -167,12 +169,18 @@ export const CartridgeMemoryScreen: React.FC<CartridgeMemoryScreenProps> = ({
 
       {/* 7-Day Pixel Heatmap Activity Log */}
       <div className="bg-[#FAF8F5] border-2 border-[#2D3142] p-4 pixel-shadow">
-        <div className="flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#2D3142] pb-2 mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#2D3142]" />
             <span className="font-mono text-xs font-bold uppercase text-[#2D3142]">
               7-DAY FOCUS ACTIVITY LOG
             </span>
+            {streakInfo && (
+              <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[#FFF3E8] border border-[#2D3142] rounded-xs text-[#8E4E14] flex items-center gap-1">
+                <span>🔥</span>
+                <span>{streakInfo.currentStreak}-DAY STREAK</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1 font-mono text-[10px] text-[#2D3142]/70">
             <span>LESS</span>

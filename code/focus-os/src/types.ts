@@ -48,6 +48,15 @@ export interface DayActivity {
   level: 0 | 1 | 2 | 3;
 }
 
+export interface StreakInfo {
+  currentStreak: number;
+  isTodayTargetMet: boolean;
+  todayMinutes: number;
+  targetMinutes: number;
+  minutesRemaining: number;
+  streakDays: boolean[];
+}
+
 export type PetSpecies = 'sprout' | 'ember' | 'bubbles' | 'pip' | 'mochi';
 
 export interface PetEvolutionStage {

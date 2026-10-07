@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Sparkles, Heart, ChevronDown, ChevronUp, Lock, RefreshCw } from 'lucide-react';
-import { PetState } from '../types';
+import { PetState, StreakInfo } from '../types';
 import { PET_SPECIES_CONFIGS, getCurrentPetStage, getNextPetStage } from '../data/petEvolutions';
 import { playChiptuneBeep } from '../utils/audio';
+import { DailyStreakCounter } from './DailyStreakCounter';
 
 interface PixelPetProps {
   pet: PetState;
@@ -10,6 +11,7 @@ interface PixelPetProps {
   onOpenPetSettings?: () => void;
   soundEnabled: boolean;
   isFocusActive: boolean;
+  streakInfo: StreakInfo;
 }
 
 export const PixelPet: React.FC<PixelPetProps> = ({
@@ -18,6 +20,7 @@ export const PixelPet: React.FC<PixelPetProps> = ({
   onOpenPetSettings,
   soundEnabled,
   isFocusActive,
+  streakInfo,
 }) => {
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [speechIndex, setSpeechIndex] = useState(0);
@@ -64,76 +67,113 @@ export const PixelPet: React.FC<PixelPetProps> = ({
       {/* ========================================================================= */}
       {/* MOBILE COMPACT COMPANION STRIP (md:hidden) - Saves vertical scroll        */}
       {/* ========================================================================= */}
-      <div className="md:hidden">
-        <div className="p-2.5 flex items-center justify-between gap-2 bg-[#FAF8F5]">
-          {/* Mini Avatar + Stage info */}
-          <div
-            onClick={() => setIsMobileExpanded((prev) => !prev)}
-            className="flex items-center gap-2 cursor-pointer min-w-0"
-          >
-            <div className="w-8 h-8 bg-[#EBF3EC] border border-[#2D3142] rounded-md flex items-center justify-center shrink-0">
-              {currentStage.renderSprite({
-                isFocusActive,
-                mood: pet.mood,
-                level: pet.level,
-              })}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#2D3142] truncate">
-                <span>{pet.name}</span>
-                <span className="text-[10px] px-1 bg-[#7FB685] border border-[#2D3142] rounded-xs">
-                  LV.{pet.level}
-                </span>
-                {isFocusActive && (
-                  <span className="text-[9px] px-1 bg-[#F4A261] border border-[#2D3142] rounded-xs animate-pulse">
-                    FOCUSING
+      <div className="md:hidden bg-[#FAF8F5]">
+        <div className="p-2.5 flex flex-col gap-2">
+          {/* Top Row: Mini Avatar + Pet Name & Level + Quick Actions */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Mini Avatar + Stage info */}
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                id="mobile-pet-avatar-btn"
+                onClick={() => setIsMobileExpanded((prev) => !prev)}
+                title="Tap to expand companion creature stage"
+                className="w-9 h-9 bg-[#EBF3EC] hover:bg-[#CADBFB] border border-[#2D3142] rounded-md flex items-center justify-center shrink-0 cursor-pointer active:translate-y-0.5 transition-transform"
+              >
+                {currentStage.renderSprite({
+                  isFocusActive,
+                  mood: pet.mood,
+                  level: pet.level,
+                })}
+              </button>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#2D3142]">
+                  <span className="truncate max-w-[90px]">{pet.name}</span>
+                  <span className="text-[10px] px-1 bg-[#7FB685] border border-[#2D3142] rounded-xs shrink-0">
+                    LV.{pet.level}
                   </span>
+                  {isFocusActive && (
+                    <span className="text-[9px] px-1 bg-[#F4A261] border border-[#2D3142] rounded-xs animate-pulse shrink-0">
+                      FOCUS
+                    </span>
+                  )}
+                </div>
+                <div className="font-mono text-[10px] text-[#2D3142]/70 truncate">
+                  {currentStage.title} • {pet.exp}/{pet.maxExp} XP
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Quick Actions (Feed Treat & Expand Toggle) */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                id="mobile-mini-feed-btn"
+                onClick={handlePetFeed}
+                disabled={!hasFood}
+                title={
+                  hasFood
+                    ? `Feed ${speciesConfig.foodName}`
+                    : 'Complete a task or timer to harvest food!'
+                }
+                className={`pixel-btn flex items-center gap-1 px-2.5 py-1 border rounded-md font-mono text-[11px] font-bold ${
+                  hasFood
+                    ? 'bg-[#F8C390] hover:bg-[#F4A261] border-[#2D3142] text-[#2D3142]'
+                    : 'bg-[#E4DFD5] border-[#2D3142]/50 text-[#2D3142]/60 cursor-not-allowed'
+                }`}
+              >
+                {hasFood ? (
+                  <>
+                    <Heart className="w-3 h-3 fill-[#8E4E14] text-[#8E4E14]" />
+                    <span>FEED {speciesConfig.foodEmoji} ({pet.berriesAvailable})</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3 h-3 text-[#2D3142]/60" />
+                    <span>0 {speciesConfig.foodEmoji} (WORK XP)</span>
+                  </>
                 )}
-              </div>
-              <div className="font-mono text-[10px] text-[#2D3142]/70 truncate">
-                {currentStage.title} • {pet.exp}/{pet.maxExp} XP
-              </div>
+              </button>
+
+              <button
+                id="mobile-expand-pet-btn"
+                onClick={() => setIsMobileExpanded((prev) => !prev)}
+                aria-label={isMobileExpanded ? 'Collapse pet stage' : 'Expand pet stage'}
+                className="pixel-btn p-1.5 bg-[#F2EFE9] border border-[#2D3142] rounded-md text-[#2D3142] cursor-pointer"
+              >
+                {isMobileExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
-          {/* Quick Actions: Feed Treat & Expand stage */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              id="mobile-mini-feed-btn"
-              onClick={handlePetFeed}
-              disabled={!hasFood}
-              title={
-                hasFood
-                  ? `Feed ${speciesConfig.foodName}`
-                  : 'Complete a task or timer to harvest food!'
-              }
-              className={`pixel-btn flex items-center gap-1 px-2.5 py-1 border rounded-md font-mono text-[11px] font-bold ${
-                hasFood
-                  ? 'bg-[#F8C390] hover:bg-[#F4A261] border-[#2D3142] text-[#2D3142]'
-                  : 'bg-[#E4DFD5] border-[#2D3142]/50 text-[#2D3142]/60 cursor-not-allowed'
-              }`}
-            >
-              {hasFood ? (
-                <>
-                  <Heart className="w-3 h-3 fill-[#8E4E14] text-[#8E4E14]" />
-                  <span>FEED {speciesConfig.foodEmoji} ({pet.berriesAvailable})</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-3 h-3 text-[#2D3142]/60" />
-                  <span>0 {speciesConfig.foodEmoji} (WORK XP)</span>
-                </>
-              )}
-            </button>
+          {/* Dedicated Daily Streak Bar on Mobile - Perfectly visible & accessible */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#2D3142]/20 font-mono text-[10px]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[#8E4E14] font-bold shrink-0">STREAK:</span>
+              <DailyStreakCounter
+                streakInfo={streakInfo}
+                soundEnabled={soundEnabled}
+                compact
+              />
+            </div>
 
-            <button
-              id="mobile-expand-pet-btn"
-              onClick={() => setIsMobileExpanded((prev) => !prev)}
-              aria-label={isMobileExpanded ? 'Collapse pet stage' : 'Expand pet stage'}
-              className="pixel-btn p-1 bg-[#F2EFE9] border border-[#2D3142] rounded-md text-[#2D3142]"
-            >
-              {isMobileExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+            {/* Target focus progress indicator */}
+            <div className="flex items-center gap-1.5 shrink-0 text-[#2D3142]/80">
+              <span>{streakInfo.todayMinutes}/{streakInfo.targetMinutes}m</span>
+              <div className="w-12 bg-[#E4DFD5] border border-[#2D3142] h-2 rounded-xs overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    streakInfo.isTodayTargetMet ? 'bg-[#7FB685]' : 'bg-[#F4A261]'
+                  }`}
+                  style={{
+                    width: `${Math.min(100, Math.round((streakInfo.todayMinutes / streakInfo.targetMinutes) * 100))}%`,
+                  }}
+                />
+              </div>
+              {streakInfo.isTodayTargetMet && (
+                <span className="text-[#35693F] font-bold">✓</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -142,9 +182,9 @@ export const PixelPet: React.FC<PixelPetProps> = ({
       {/* FULL COMPANION STAGE (Always on desktop; toggleable on mobile)           */}
       {/* ========================================================================= */}
       <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} p-3 sm:p-4 border-t-2 md:border-t-0 border-[#2D3142]`}>
-        {/* Top Header tab on desktop */}
-        <div className="hidden md:flex items-center justify-between border-b-2 border-[#2D3142] pb-2 mb-3">
-          <div className="flex items-center gap-2">
+        {/* Top Header tab - Responsive on both mobile expanded & desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b-2 border-[#2D3142] pb-2.5 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-xs font-bold px-1.5 py-0.5 bg-[#7FB685] text-[#2D3142] border border-[#2D3142]">
               COMPANION CREATURE
             </span>
@@ -154,9 +194,15 @@ export const PixelPet: React.FC<PixelPetProps> = ({
             <span className="font-mono text-[9px] px-1.5 py-0.2 bg-[#CADBFB] border border-[#2D3142] text-[#2D3142] rounded-xs">
               {currentStage.badge}
             </span>
+
+            {/* Visual 'Daily Streak' Counter displayed directly next to pet status */}
+            <DailyStreakCounter
+              streakInfo={streakInfo}
+              soundEnabled={soundEnabled}
+            />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {onOpenPetSettings && (
               <button
                 id="pet-card-change-btn"
@@ -213,6 +259,11 @@ export const PixelPet: React.FC<PixelPetProps> = ({
 
             <div className="mt-1 font-mono text-[10px] uppercase font-bold text-[#2D3142] px-2 py-0.5 bg-[#FAF8F5] border border-[#2D3142] flex items-center gap-1">
               <span>{isFocusActive ? '⚡ IN THE ZONE' : currentStage.title}</span>
+            </div>
+
+            {/* Daily Streak target indicator widget */}
+            <div className="mt-2 w-full flex justify-center">
+              <DailyStreakCounter streakInfo={streakInfo} soundEnabled={soundEnabled} />
             </div>
 
             {nextStage && (

@@ -29,6 +29,7 @@ import {
 } from './utils/audio';
 import { loadFontSettings, saveFontSettings, applyFontSettingsToDOM } from './utils/fontSettings';
 import { getCurrentPetStage } from './data/petEvolutions';
+import { calculateDailyStreak, recordStreakTargetMet } from './utils/streak';
 
 export default function App() {
   // Active Screen Tab
@@ -42,6 +43,11 @@ export default function App() {
     petName: string;
     species: string;
     level: number;
+  } | null>(null);
+  const [streakToast, setStreakToast] = useState<{
+    streak: number;
+    minutes: number;
+    target: number;
   } | null>(null);
 
   // Authenticated User & Portal state - Defaults to null to present standalone Login/Signup screen
@@ -215,18 +221,33 @@ export default function App() {
       };
     });
 
-    // Update today's activity log
+    // Update today's activity log and track daily focus target
+    const dailyTarget = currentUser?.dailyGoalMinutes || 30;
     setActivityLog((prev) => {
       const copy = [...prev];
       const todayIdx = copy.length - 1;
       if (todayIdx >= 0) {
         const today = copy[todayIdx];
-        const newMins = today.minutesFocused + minutes;
+        const prevMins = today.minutesFocused;
+        const newMins = prevMins + minutes;
         copy[todayIdx] = {
           ...today,
           minutesFocused: newMins,
           level: newMins >= 60 ? 3 : newMins >= 30 ? 2 : 1,
         };
+
+        // If today just met or exceeded the daily focus target:
+        if (prevMins < dailyTarget && newMins >= dailyTarget) {
+          playVictoryFanfare(soundEnabled);
+          const computed = calculateDailyStreak(copy, dailyTarget);
+          recordStreakTargetMet(computed.currentStreak);
+          setStreakToast({
+            streak: computed.currentStreak,
+            minutes: newMins,
+            target: dailyTarget,
+          });
+          setTimeout(() => setStreakToast(null), 5000);
+        }
       }
       return copy;
     });
@@ -595,6 +616,8 @@ export default function App() {
   }
 
   const activeTasksCount = tasks.filter((t) => !t.completed).length;
+  const dailyTargetMinutes = currentUser?.dailyGoalMinutes || 30;
+  const streakInfo = calculateDailyStreak(activityLog, dailyTargetMinutes);
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#2D3142] flex flex-col font-sans selection:bg-[#B4C5E4]">
@@ -639,6 +662,33 @@ export default function App() {
           </div>
         )}
 
+        {/* Floating Daily Streak Target Achievement Toast */}
+        {streakToast && (
+          <div className="fixed top-3 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 z-50 p-3.5 bg-[#FAF8F5] border-3 border-[#2D3142] rounded-xl pixel-shadow-lg animate-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#F4A261] border-2 border-[#2D3142] flex items-center justify-center text-xl shrink-0 animate-bounce">
+                🔥
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-[#8E4E14] uppercase tracking-wider">
+                    DAILY TARGET ACHIEVED!
+                  </span>
+                  <span className="font-mono text-[9px] px-1.5 py-0.2 bg-[#7FB685] border border-[#2D3142] text-[#2D3142] rounded-xs font-bold">
+                    {streakToast.streak}-DAY STREAK
+                  </span>
+                </div>
+                <div className="font-mono text-xs font-bold text-[#2D3142] truncate mt-0.5">
+                  Daily focus goal achieved ({streakToast.minutes}/{streakToast.target}m)!
+                </div>
+                <div className="font-sans text-[11px] text-[#2D3142]/75">
+                  Your daily focus streak is now extended to {streakToast.streak} consecutive days!
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Console Main Body Area */}
         <main className="flex-1 max-w-5xl w-full mx-auto px-2.5 sm:px-6 py-2.5 sm:py-4 pb-28 md:pb-8 flex flex-col space-y-3 sm:space-y-4">
           {/* Navigation Tabs (Top bar on desktop, bottom docked bar on mobile) */}
@@ -664,6 +714,7 @@ export default function App() {
             onOpenPetSettings={() => setIsSettingsOpen(true)}
             soundEnabled={soundEnabled}
             isFocusActive={isTimerRunning}
+            streakInfo={streakInfo}
           />
 
           {/* Active Screen Display Area */}
@@ -754,6 +805,7 @@ export default function App() {
                 onLogout={handleLogout}
                 onSwitchAccount={handleLogout}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                streakInfo={streakInfo}
               />
             )}
           </div>
