@@ -4,15 +4,15 @@ A pixel-art productivity and focus system designed to make task management feel 
 
 ## Features
 
-- ?? **Quest-based task planning** — turn tasks into manageable quests
-- ?? **Focus sessions** — structured sessions for deep work
-- ?? **Pixel Pet** — interact with and evolve a virtual companion
-- ?? **Daily streaks** — track consistency over time
-- ?? **Sensory tools** — ambient sounds and focus-friendly experiences
-- ?? **Routine management** — create and manage recurring routines
-- ?? **What Should I Do Now?** — helps choose the next task
-- ?? **Cartridge Memory** — persistent productivity data
-- ?? **Settings** — customize the experience
+- **Quest-based task planning** â€” turn tasks into manageable quests
+- **Focus sessions** â€” structured sessions for deep work
+- **Pixel Pet** â€” interact with and evolve a virtual companion
+- **Daily streaks** â€” track consistency over time
+- **Sensory tools** â€” ambient sounds and focus-friendly experiences
+- **Routine management** â€” create and manage recurring routines
+- **What Should I Do Now?** â€” helps choose the next task
+- **Cartridge Memory** â€” persistent productivity data
+- **Settings** â€” customize the experience
 
 ## Tech Stack
 
@@ -28,12 +28,12 @@ A pixel-art productivity and focus system designed to make task management feel 
 \\\
 code/focus-os/
 +-- src/
-¦   +-- components/
-¦   +-- data/
-¦   +-- utils/
-¦   +-- App.tsx
-¦   +-- index.css
-¦   +-- types.ts
+Â¦   +-- components/
+Â¦   +-- data/
+Â¦   +-- utils/
+Â¦   +-- App.tsx
+Â¦   +-- index.css
+Â¦   +-- types.ts
 +-- index.html
 +-- package.json
 +-- vite.config.ts
